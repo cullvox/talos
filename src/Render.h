@@ -10,7 +10,7 @@ namespace ts {
 /** @brief Aligns the cursor as this axis point for where to draw.
  *       The default value is eTopLeft.
  */
-enum class RenderAlignment {
+enum class RenderAlign {
     eTopLeft,
     eTopCenter,
     eTopRight,
@@ -37,12 +37,21 @@ class Render {
 public:
 
     Render& setBitmap(BitmapInterface& pBitmap);
-    Render& setCursor(Vector2i position);
-    Render& setAlignment(RenderAlignment alignment);
+    Render& setCursor(Vector2i pos);
+    Render& setAlignment(RenderAlign align);
     Render& setFillColor(Color color);
     Render& setOutlineColor(Color color);
     Render& setOutlineThickness(uint16_t px);
 
+    Vector2i    getCursor();
+    RenderAlign getAlign();
+    Color       getFillColor();
+    Color       getOutlineColor();
+    uint16_t    getOutlineThickness();
+
+    Render& seekCursor(Vector2i deltaPos);
+
+    Render& setPixel(Vector2i pos, Color color);
     Render& drawLine(Rect2i rect);
     Render& drawRect(Rect2i rect);
     Render& drawCircle(uint16_t radius);
@@ -50,11 +59,13 @@ public:
     Render& drawTextFormat(const char* format, ...);
     Render& drawTextFromFlash(Strings::Select selection);
 
+    Rect2i calculateTextBoxFormat(Vector2i position, uint16_t fontSize, RenderAlign align, const char* format, ...);
+    Rect2i calculateTextBox(Vector2i position, uint16_t fontSize, RenderAlign align, const char* str);
 
 private:
     OpenFontRender _ofr;
     BitmapInterface* _bitmap;
-    RenderAlignment _alignment; 
+    RenderAlign _align; 
     Vector2i _cursor;
     Color _fill;
     Color _outline;
