@@ -3,6 +3,7 @@
 #include <SPI.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
+#include <Preferences.h>
 #include <ArduinoJson.h>
 #include <OpenFontRender.h>
 
@@ -13,30 +14,32 @@
 #include "Pins.h"
 #include "Bitmap.h"
 #include "Display.h"
-#include "SlideDigitalClock.h"
-#include "SlideLastFM.h"
-#include "SlideError.h"
-#include "SlideTalos.h"
+#include "slides/SlideDigitalClock.h"
+#include "slides/SlideLastFM.h"
+#include "slides/SlideError.h"
+#include "slides/SlideTalos.h"
 #include "FlashStrings.h"
 #include "Secrets.h"
 
 
 ts::BitmapAlloc buffer{ts::Display::extent};
-OpenFontRender ofr;
+ts::Render render;
 // ts::Render render;
 ts::SlideError slideError;
 ts::Display display;
+Preferences prefs;
 
 void error()
 {
     buffer.clear();
-    slideError.fetch(&buffer);
-    slideError.render(ofr);
+    slideError.fetch(render);
+    slideError.render(render);
     display.present(buffer.data());
 }
 
 bool connect()
 {
+
     const char* SSID = TS_SECRET_WIFI_SSID;
     const char* Password = TS_SECRET_WIFI_PASSWORD;
     const char* Username = TS_SECRET_WIFI_USERNAME;
@@ -84,29 +87,22 @@ Err_ConnectFailed:
 
 void setup()
 {
-    auto ofrDrawPixel = [](int32_t x, int32_t y, uint16_t c){ buffer.set(ts::Vector2i{(int16_t)x, (int16_t)y}, c); };
-    auto ofrPrint = [](const char* str){ printf("%s", str); };
 
-    ofr.set_printFunc(ofrPrint);
-    ofr.set_drawPixel(ofrDrawPixel);
-    ofr.showCredit();
-    ofr.showFreeTypeVersion();
-    ofr.setDebugLevel(OFR_DEBUG | OFR_ERROR | OFR_INFO);
     
     
     //SPI.begin(ts::Pin::SpiClk, ts::Pin::SpiCipo, ts::Pin::SpiCopi, ts::Pin::SdSpiCs);
 
-    TS_INFOF("This is a %s!\n", "TEST");
+    // if (!SD.begin(ts::Pin::SdSpiCs))
+    // {
+    //     printf("Could not initialize SD!\r\n");
+    //     return;
+    // }
+    // 
+    // TS_INFOF("Total Bytes: %lld, Used Bytes: %lld\r\n", SD.totalBytes(), SD.usedBytes());
 
-    //if (!SD.begin(ts::Pin::SdSpiCs))
-    //{
-    //    printf("Could not initialize SD!\r\n");
-    //    return;
-    //}
-    //
-    //printf("Total Bytes: %lld, Used Bytes: %lld\r\n", SD.totalBytes(), SD.usedBytes());
-
-    ofr.loadFont(Neuton_Regular, sizeof(Neuton_Regular), 0);
+    TS_INFO("TALOSv1 " TALOS_VERSION_STRING"\n");
+    render.setBitmap(buffer);
+    render.loadFont(Neuton_Regular, sizeof(Neuton_Regular));
 
     
     SPI.begin(ts::Pin::SpiClk, ts::Pin::SpiCipo, ts::Pin::SpiCopi, ts::Pin::PaperSpiCs);
@@ -119,10 +115,16 @@ void setup()
     buffer.clear(0xFF);
     // display.clear();
 
+    TS_INFO("Creating Slide!\n");
     ts::SlideTalos talosSlide;
-    talosSlide.fetch(nullptr);
-    talosSlide.render(ofr);
 
+
+    talosSlide.fetch(render);
+    
+    TS_INFO("Rendering Slide\n");
+    talosSlide.render(render);
+
+    TS_INFO("Presenting Slide\n");
     display.present(buffer.data());
 
     sleep(5);
@@ -142,8 +144,8 @@ void setup()
     // ts::SlideTalos talosSlide;
 // 
     TS_INFO("Beginning Slide\n");
-    lastfmSlide.fetch(&buffer);
-    lastfmSlide.render(ofr);
+    lastfmSlide.fetch(render);
+    lastfmSlide.render(render);
 
     // talosSlide.fetch(nullptr);
     // talosSlide.render(ofr);

@@ -23,6 +23,9 @@ struct Vector2i {
     inline Vector2i operator*(int16_t scalor) const { return Vector2i{ (int16_t)(x * scalor), (int16_t)(y * scalor)}; }
     inline Vector2i operator/(const Vector2i& rhs) const { return Vector2i{ (int16_t)(x / rhs.x), (int16_t)(y / rhs.y)}; }
     inline Vector2i operator/(int16_t value) const { return Vector2i{ (int16_t)(x / value), (int16_t)(y / value)}; }
+    inline Vector2i& operator+=(const Vector2i& rhs) { x += rhs.x; y += rhs.y; return *this; }
+    inline Vector2i& operator-=(const Vector2i& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
+    
     inline operator Extent2i() const;
 };
 

@@ -68,7 +68,7 @@ namespace ts {
 
 
 
-bool SlideLastFM::fetch(BitmapInterface* pBitmap)
+bool SlideLastFM::fetch(Render& render)
 {
     TS_INFO("Fetching LastFM HTTP GET Request\n");
 
@@ -152,51 +152,50 @@ bool SlideLastFM::fetch(BitmapInterface* pBitmap)
     http.end();
 
 
-    JPEGDEC* dec = new JPEGDEC();
-    dec->setUserPointer(pBitmap);
-    dec->setPixelType(ONE_BIT_DITHERED);
-
-    if (!dec->openRAM((uint8_t*)payload.c_str(), payload.length(), JPEGDraw))
-    {
-        TS_ERROR("Could not open JPEGDEC from memory!\n");
-    }    
-
-    if (!dec->decode(0, 0, 0))
-    {
-        TS_ERROR("Could not decode JPEGDEC image!");
-    }
+    //JPEGDEC* dec = new JPEGDEC();
+    //dec->setUserPointer(pBitmap);
+    //dec->setPixelType(ONE_BIT_DITHERED);
+//
+    //if (!dec->openRAM((uint8_t*)payload.c_str(), payload.length(), JPEGDraw))
+    //{
+    //    TS_ERROR("Could not open JPEGDEC from memory!\n");
+    //}    
+//
+    //if (!dec->decode(0, 0, 0))
+    //{
+    //    TS_ERROR("Could not decode JPEGDEC image!");
+    //}
 
     return true;
 }
 
-void SlideLastFM::render(OpenFontRender& ofr)
+void SlideLastFM::render(Render& render)
 {
-    unsigned int trackSize = ofr.calculateFitFontSize(700, 150, Layout::Horizontal, _track.c_str());
-    FT_BBox trackBounds = ofr.calculateBoundingBox(800/2, 480/2, trackSize, Align::BottomCenter, Layout::Horizontal, _track.c_str());
+    unsigned int trackSize = render.calculateFitFontSize(700, 150, _track.c_str());
+    Rect2i trackBounds = render.calculateTextBox(Vector2i{800/2, 480/2}, trackSize, RenderAlign::eBottomCenter, _track.c_str());
     
-    ofr.setFontColor(0x0000);
-    ofr.setBackgroundColor(0xFFFF);
-    ofr.setFontSize(trackSize);
-    ofr.setAlignment(Align::BottomCenter);
-    ofr.setCursor(800/2, 480/2);
-
-    ofr.printf("%s", _track.c_str());
+    render
+        .setFillColor(Color::eBlack)
+        .setOutlineColor(Color::eWhite)
+        .setFontSize(trackSize)
+        .setAlignment(RenderAlign::eBottomCenter)
+        .setCursor(Vector2i{800/2, 480/2})
+        .drawText(_track.c_str());
 
 
     const char* pPlayingText = _currentlyListening ? "currently playing" : "was playing";
-    FT_BBox playingBounds = ofr.calculateBoundingBox(trackBounds.xMin, trackBounds.yMin, 96, Align::BottomLeft, Layout::Horizontal, pPlayingText);
+    Rect2i playingBounds = render.calculateTextBox(trackBounds.offset, 96, RenderAlign::eBottomLeft, pPlayingText);
 
-    ofr.setAlignment(Align::BottomLeft);
-    ofr.setCursor(trackBounds.xMin, playingBounds.yMin); // 480/2 + 1 - trackSize/2
-    ofr.setFontSize(96);
+    render
+        .setAlignment(RenderAlign::eBottomLeft)
+        .setCursor(playingBounds.offset) // 480/2 + 1 - trackSize/2
+        .setFontSize(96)
+        .drawText(pPlayingText);
 
-    ofr.printf("%s", pPlayingText);
-
-    ofr.setAlignment(Align::TopRight);
-    ofr.setCursor(trackBounds.xMax, trackBounds.yMax);
-
-    ofr.printf("%s", _artist.c_str());
-    
+    render
+        .setAlignment(RenderAlign::eTopRight)
+        .setCursor(playingBounds.offset + playingBounds.extent)
+        .drawText(_artist.c_str()); 
 
 }
 

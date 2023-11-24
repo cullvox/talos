@@ -7,8 +7,7 @@ namespace ts {
 
 class SlideError : public Slide {
 public:
-    virtual bool fetch(BitmapInterface* pBitmap) override;
-    virtual void render(OpenFontRender& ofr) override;
+    virtual void render(Render& ofr) override;
 
     void setPrimary(Strings::Select index);
     void setSecondary(Strings::Select index);

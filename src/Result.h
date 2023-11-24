@@ -6,6 +6,8 @@ struct Result {
     enum Enum {
         eOK = 0,
         eError = 1,
+        eNoFetch, /* The slide wasn't fetched before being used. */
+        
 
         // Hardware
         eStdioError,

@@ -10,8 +10,8 @@ namespace ts {
 
 class SlideLastFM : public Slide {
 public: 
-    virtual bool fetch(BitmapInterface* pBitmap) override;
-    virtual void render(OpenFontRender& ofr) override;
+    virtual bool fetch(Render&) override;
+    virtual void render(Render&) override;
 
 private:
     String _artist;

@@ -6,8 +6,7 @@ namespace ts {
 
 class SlideTalos : public Slide {
 public:
-    virtual bool fetch(BitmapInterface* pBitmap) override;
-    virtual void render(OpenFontRender& ofr) override;
+    virtual void render(Render&) override;
 };
 
 } /* namespace ts */
