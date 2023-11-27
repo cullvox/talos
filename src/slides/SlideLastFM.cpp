@@ -21,7 +21,7 @@ int JPEGDraw(JPEGDRAW *pDraw)
     {
         pDraw->pPixels[i] = (pDraw->pPixels[i] & 0x7e0) >> 5; // extract just the six green channel bits.
     }
-
+    
     if (dither)
     {
         for(int16_t j = 0; j < h; j++)
@@ -112,11 +112,11 @@ bool SlideLastFM::fetch(Render& render)
     TS_INFOF("Latest Album: %s", _album.c_str());
     TS_INFOF("Latest Tracks: %s", _track.c_str());
 
-    // if (_track.length() > 16)
-    // {
-    //     _track = _track.substring(0, 16);
-    //     _track.concat("...");
-    // }
+    if (_track.length() > 16)
+    {
+        _track = _track.substring(0, 16);
+        _track.concat("...");
+    }
 
     String nowplaying = json["recenttracks"]["track"][0]["@attr"]["nowplaying"].as<String>();
     nowplaying.toLowerCase();
@@ -171,30 +171,23 @@ bool SlideLastFM::fetch(Render& render)
 
 void SlideLastFM::render(Render& render)
 {
-    unsigned int trackSize = render.calculateFitFontSize(700, 150, _track.c_str());
-    Rect2i trackBounds = render.calculateTextBox(Vector2i{800/2, 480/2}, trackSize, RenderAlign::eBottomCenter, _track.c_str());
-    
-    render
-        .setFillColor(Color::eBlack)
-        .setOutlineColor(Color::eWhite)
-        .setFontSize(trackSize)
-        .setAlignment(RenderAlign::eBottomCenter)
-        .setCursor(Vector2i{800/2, 480/2})
-        .drawText(_track.c_str());
-
-
-    const char* pPlayingText = _currentlyListening ? "currently playing" : "was playing";
-    Rect2i playingBounds = render.calculateTextBox(trackBounds.offset, 96, RenderAlign::eBottomLeft, pPlayingText);
+    const char* pPlayingText = _currentlyListening ? "now playing" : "was playing"; 
 
     render
         .setAlignment(RenderAlign::eBottomLeft)
-        .setCursor(playingBounds.offset) // 480/2 + 1 - trackSize/2
-        .setFontSize(96)
-        .drawText(pPlayingText);
+        .setCursor(Vector2i{10, (int16_t)(480/2 - 96/2)}) // 480/2 + 1 - trackSize/2
+        .setFontSize(56)
+        .drawText(pPlayingText)
 
-    render
-        .setAlignment(RenderAlign::eTopRight)
-        .setCursor(playingBounds.offset + playingBounds.extent)
+        .setFillColor(Color::eBlack)
+        .setOutlineColor(Color::eWhite)
+        .setFontSize(96)
+        .setAlignment(RenderAlign::eMiddleLeft)
+        .setCursor(Vector2i{10, 480/2})
+        .drawText(_track.c_str())
+
+        .setAlignment(RenderAlign::eTopLeft)
+        .setCursor(Vector2i{10, (int16_t)(480/2 + 96/2)})
         .drawText(_artist.c_str()); 
 
 }
