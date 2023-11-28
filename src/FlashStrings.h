@@ -34,6 +34,9 @@ public:
         
         eSol_Reboot,
         eSol_Wifi_Recon,
+         
+        eNowPlaying,
+        eWasPlaying,
     };
 
     /** @brief Copys a hidden static PROGMEM string to a buffer. */

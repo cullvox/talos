@@ -21,7 +21,7 @@ void SlideTalos::render(Render& render)
         .setFontSize(50)
         .drawTextFromFlash(Strings::eCredit)
 
-        .setCursor(Vector2i{790, 180})
+        .setCursor(Vector2i{770, 180})
         .setAlignment(RenderAlign::eBottomRight)
         .setFontSize(45)
         .drawTextFromFlash(Strings::eVersion);

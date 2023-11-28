@@ -84,6 +84,11 @@ uint16_t Render::getOutlineThickness()
     return _thickness;
 }
 
+BitmapInterface* Render::getBitmap()
+{
+    return _bitmap;
+}
+
 Render& Render::seekCursor(Vector2i deltaPos)
 {
     _cursor += deltaPos;

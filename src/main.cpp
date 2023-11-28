@@ -6,6 +6,8 @@
 #include <Preferences.h>
 #include <ArduinoJson.h>
 #include <OpenFontRender.h>
+#include <esp_adc_cal.h>
+#include <esp_ota_ops.h>
 
 #include "Version.h"
 #include "Print.h"
@@ -15,11 +17,12 @@
 #include "Bitmap.h"
 #include "Display.h"
 #include "slides/SlideDigitalClock.h"
-#include "slides/SlideLastFM.h"
+#include "slides/SlideSpotify.h"
 #include "slides/SlideError.h"
 #include "slides/SlideTalos.h"
 #include "FlashStrings.h"
 #include "Secrets.h"
+#include "slides/SlideLastFM.h"
 
 
 ts::BitmapAlloc buffer{ts::Display::extent};
@@ -87,9 +90,19 @@ Err_ConnectFailed:
 
 void setup()
 {
+    const esp_app_desc_t* app = esp_ota_get_app_description();
 
-    
-    
+    printf("\n");
+    printf("ooooooooooooo       .o.       ooooo          .oooooo.    .oooooooo " "\tCommit %s\n", TALOS_VERSION_GIT_HASH_SHORT);
+    printf("8'   888   `8      .888.      `888'         d8P'  `Y8b  d8P'    `Y8" "\tTag %s\n", TALOS_VERSION_GIT_TAG);
+    printf("     888          .8 888.      888         888      888 Y88bo.     " "\tVersion %s\n", TALOS_VERSION_STRING);
+    printf("     888         .8  `888.     888         888      888  ` Y8888o. " "\tDate %s\n", app->date);
+    printf("     888        .88ooo8888.    888         888      888      ` Y88b" "\tIDF Version %s\n", app->idf_ver);
+    printf("     888       .8'     `888.   888       o `88b    d88' oo     .d8P" "\tArduino %d.%d.%d\n", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
+    printf("    o888o     o88o     o8888o o888ooooood8  `Y8bood8P'  8888888P'  " "\tby Caden Miller (https://cadenmiller.dev)\n");
+    printf("\n");
+
+
     //SPI.begin(ts::Pin::SpiClk, ts::Pin::SpiCipo, ts::Pin::SpiCopi, ts::Pin::SdSpiCs);
 
     // if (!SD.begin(ts::Pin::SdSpiCs))

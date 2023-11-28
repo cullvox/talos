@@ -58,6 +58,7 @@ public:
     Color getFillColor();
     Color getOutlineColor();
     uint16_t getOutlineThickness();
+    BitmapInterface* getBitmap();
 
     Render& seekCursor(Vector2i deltaPos);
 

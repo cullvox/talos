@@ -30,12 +30,12 @@ void SlideError::render(Render& render)
         .setFontSize(topSize)
         .drawText(_primary);
 
-    /* draw the secondary smaller text*/
+    /* draw the secondary smaller text */
     unsigned int bottomSize = render.calculateFitFontSize(700, 100, _secondary);
 
     bottomSize = CLAMP(topSize * 0.5f, 45.f, (float)topSize); 
     render
-        .setCursor(Vector2i{10, 480/2 + topSize})
+        .setCursor(Vector2i{10, (int16_t)(480/2 + topSize)})
         .setFontSize(bottomSize)
         .drawText(_secondary);
 

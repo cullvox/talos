@@ -7,6 +7,19 @@ namespace ts {
 #define TS_STRINGIFY(a) TS_XSTRINGIFY(a)
 #define TS_XSTRINGIFY(a) #a
 
+#ifndef TALOS_VERSION_GIT_TAG
+#define TALOS_VERSION_GIT_TAG ""
+#endif
+
+#ifndef TALOS_VERSION_GIT_HASH
+#define TALOS_VERSION_GIT_HASH ""
+#endif
+
+#ifndef TALOS_VERSION_GIT_HASH_SHORT
+#define TALOS_VERSION_GIT_HASH_SHORT ""
+#endif
+
+
 #define TALOS_VERSION_TAG "Beta"
 #define TALOS_VERSION_MAJOR 0
 #define TALOS_VERSION_MINOR 6
@@ -16,6 +29,6 @@ namespace ts {
                             (uint32_t)(TALOS_VERSION_MINOR) << 8 | \
                             (uint32_t)(TALOS_VERSION_PATCH);
 
-#define TALOS_VERSION_STRING TALOS_VERSION_TAG " " TS_STRINGIFY(TALOS_VERSION_MAJOR) "." TS_STRINGIFY(TALOS_VERSION_MINOR) "." TS_STRINGIFY(TALOS_VERSION_PATCH) 
+#define TALOS_VERSION_STRING TALOS_VERSION_GIT_TAG "-" TALOS_VERSION_GIT_HASH_SHORT
 
 } /* namespace ts */

@@ -33,13 +33,15 @@ TS_PROGMEM_STR(Err_Wifi_SsidNotFound, "WiFi: SSID Not Found");
 TS_PROGMEM_STR(Sol_Wifi_Recon, "Attempting to Reconnect in 30 Seconds");
 TS_PROGMEM_STR(Sol_Reboot, "Rebooting in 30 Seconds");
 
+TS_PROGMEM_STR(NowPlaying, "now playing");
+TS_PROGMEM_STR(WasPlaying, "was playing");
 
 } /* namespace progmem */
 
 
-void Strings::copyTo(Select select, char* pBuf, uint32_t bufMax)
+void Strings::copyTo(Select select, char* buf, uint32_t bufMax)
 {
-    const char* pStr = [select]()
+    const char* str = [select]()
     {
         switch (select)
         {
@@ -61,14 +63,18 @@ void Strings::copyTo(Select select, char* pBuf, uint32_t bufMax)
         case eErr_Wifi_SsidNotFound: return progmem::Err_Wifi_SsidNotFound; 
         
         case eSol_Reboot: return progmem::Sol_Reboot;
-        case eSol_Wifi_Recon: return progmem::Sol_Wifi_Recon; 
+        case eSol_Wifi_Recon: return progmem::Sol_Wifi_Recon;
+
+        case eNowPlaying: return progmem::NowPlaying;
+        case eWasPlaying: return progmem::WasPlaying;
+
         default:
             TS_ERROR("Invalid flashed string selection!");
             return progmem::Error;
         }
     }();
 
-    strncpy_P(pBuf, pStr, bufMax);
+    strncpy_P(buf, str, bufMax);
 }
 
 } /* namespace ts */
