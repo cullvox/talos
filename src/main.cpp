@@ -20,22 +20,9 @@
 #include "FlashStrings.h"
 #include "Secrets.h"
 #include "slides/SlideLastFM.h"
+#include "App.h"
 
 
-ts::BitmapAlloc buffer{ts::Display::extent};
-ts::Render render;
-// ts::Render render;
-ts::SlideError slideError;
-ts::Display display;
-Preferences prefs;
-
-void error()
-{
-    buffer.clear();
-    slideError.fetch(render);
-    slideError.render(render);
-    display.present(buffer.data());
-}
 
 bool connect()
 {
@@ -66,11 +53,11 @@ bool connect()
             continue;
         case WL_CONNECT_FAILED: 
             TS_INFO("WiFi Connection failed!\n");
-            slideError.setPrimary(ts::Strings::eErr_Wifi_ConFailed);
+            //slideError.setPrimary(ts::Strings::eErr_Wifi_ConFailed);
             goto Err_ConnectFailed;
         case WL_NO_SSID_AVAIL: 
             TS_INFO("No WiFi SSID: %s Found");
-            slideError.setPrimary(ts::Strings::eErr_Wifi_SsidNotFound);
+            // slideError.setPrimary(ts::Strings::eErr_Wifi_SsidNotFound);
             goto Err_ConnectFailed;
         default: break;
         }
@@ -80,127 +67,18 @@ bool connect()
     return true;
 
 Err_ConnectFailed:
-    slideError.setSecondary(ts::Strings::eSol_Reboot);
-    error();
+    // slideError.setSecondary(ts::Strings::eSol_Reboot);
+    // error();
     return false;
 }
 
+ts::App app;
+
 void setup()
 {
-
-
-    //SPI.begin(ts::Pin::SpiClk, ts::Pin::SpiCipo, ts::Pin::SpiCopi, ts::Pin::SdSpiCs);
-
-    // if (!SD.begin(ts::Pin::SdSpiCs))
-    // {
-    //     printf("Could not initialize SD!\r\n");
-    //     return;
-    // }
-    // 
-    // TS_INFOF("Total Bytes: %lld, Used Bytes: %lld\r\n", SD.totalBytes(), SD.usedBytes());
-
-    TS_INFO("TALOSv1 " TALOS_VERSION_STRING"\n");
-    render.setBitmap(buffer);
-    render.loadFont(Neuton_Regular, sizeof(Neuton_Regular));
-
-    
-    SPI.begin(ts::Pin::SpiClk, ts::Pin::SpiCipo, ts::Pin::SpiCopi, ts::Pin::PaperSpiCs);
-    if (!display.begin(ts::Pin::PaperSpiCs, ts::Pin::PaperRst, ts::Pin::PaperDc, ts::Pin::PaperBusy, ts::Pin::PaperPwr)) 
-    {
-        TS_INFO("e-Paper Initialization Failed!\n");
-        return;
-    }
-
-    buffer.clear(0xFF);
-    // display.clear();
-
-    TS_INFO("Creating Slide!\n");
-    ts::SlideTalos talosSlide;
-
-
-    talosSlide.fetch(render);
-    
-    TS_INFO("Rendering Slide\n");
-    talosSlide.render(render);
-
-    TS_INFO("Presenting Slide\n");
-    display.present(buffer.data());
-
-    sleep(5);
-
-    //SD.end();
-    // SPI.end();
-
-    if (!connect())
-    {
-        sleep(30);
-        ESP.restart();
-    }
-
-    buffer.clear();
-
-    ts::SlideLastFM lastfmSlide;
-    // ts::SlideTalos talosSlide;
-// 
-    TS_INFO("Beginning Slide\n");
-    lastfmSlide.fetch(render);
-    lastfmSlide.render(render);
-
-    // talosSlide.fetch(nullptr);
-    // talosSlide.render(ofr);
-
-    display.present(buffer.data());
-
-    TS_INFO("Setup Success!\n");
-
+    app.init();
 }
 
 void loop() 
 {
-
-    //ts::Slide* slides[] = 
-    //{
-    //    new ts::SlideDigitalClock(),
-    //    new ts::SlideLastFM(),
-    //};
-
-   //bool running = true;
-   //ts::Slide* pCurrent = nullptr;
-   //int index = 0;
-   //while (running)
-   //{
-   //    buffer.clear(0xFF);
-
-   //    pCurrent = slides[index];
-   //    pCurrent->fetch(&buffer);
-   //    pCurrent->render(render);
-
-   //    index = ++index % std::size(slides);
-
-   //    display.clear();
-   //    display.present(buffer.data());
-
-   //    sleep(30);
-   //}
-
-   TS_INFO("Beginning Loop!\n");
-
-    SPI.begin(ts::Pin::SpiClk, ts::Pin::SpiCipo, ts::Pin::SpiCopi, ts::Pin::PaperSpiCs);
-
-    TS_INFO("SPI Began\n");
-
-    if (!display.begin(ts::Pin::PaperSpiCs, ts::Pin::PaperRst, ts::Pin::PaperDc, ts::Pin::PaperBusy, ts::Pin::PaperPwr)) 
-    {
-        TS_INFO("e-Paper Initialization Failed!\n");
-        return;
-    }
-
-    TS_INFO("Clearing Buffer\n");
-
-    buffer.clear(); 
-
-   
-
-    SPI.end();
-
 }

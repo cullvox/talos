@@ -159,7 +159,7 @@ Render& Render::drawTextFromFlash(Strings::Select selection)
 bool Render::loadFont(const unsigned char *data, size_t size)
 {
     _ofr.unloadFont();
-    return _ofr.loadFont(data, size);
+    return !_ofr.loadFont(data, size);
 }
 
 void Render::unloadFont()

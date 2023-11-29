@@ -27,6 +27,7 @@ public:
 
 private:
     bool preformFirstTimeSetup();
+    static void setupCallback(AsyncWebServerRequest*);
 
     Preferences _prefs;
     BitmapAlloc _buffer;

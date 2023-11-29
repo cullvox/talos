@@ -22,18 +22,18 @@ void Spotify::login(AsyncWebServerRequest* request)
     memset(state, 0, sizeof(state));
     esp_fill_random(state, sizeof(state)-1);
 
-    /* Spotify scope of our TALOS. */
+    /* Spotify scope of TALOS. */
     const __FlashStringHelper* scope = 
       F("user-read-private+"
         "user-read-currently-playing+"
         "user-read-playback-state");
 
-    /* Redirects to the spotify_callback to receive the code. */
+    /* Redirect Spotify's API to the spotify_callback to receive the code. */
     const __FlashStringHelper* redirect = F("http://talos.local/spotify_callback");
 
     /* Build the Spotify redirect for authorization. */
     String url;
-    url.reserve(500);
+    url.reserve(400);
     url.concat(F("https://accounts.spotify.com/authorize/?response_type=code&scope="));
     url.concat(scope);
     url.concat(F("&redirect_uri="));
@@ -46,11 +46,17 @@ void Spotify::login(AsyncWebServerRequest* request)
 
 void Spotify::callback(AsyncWebServerRequest* request)
 {
+    /* Retrieve the spotify access code. */
     AsyncWebParameter* code = request->getParam("code");
+    if (!code)
+    {
+        TS_ERROR("Could not find Spotify access code in callback!");
+        return;
+    }
     
     String spotifyCode = code->value();
 
-    
+
 
 }
 

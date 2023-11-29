@@ -5,7 +5,6 @@
 
 #include "SlideLastFM.h"
 #include "Print.h"
-#include "ImageDraw.h"
 #include "Secrets.h"
 
 const uint8_t bayerThresholdMap [4][4] = {

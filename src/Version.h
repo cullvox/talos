@@ -29,6 +29,6 @@ namespace ts {
                             (uint32_t)(TALOS_VERSION_MINOR) << 8 | \
                             (uint32_t)(TALOS_VERSION_PATCH);
 
-#define TALOS_VERSION_STRING TALOS_VERSION_GIT_TAG "-" TALOS_VERSION_GIT_HASH_SHORT
+#define TALOS_VERSION_STRING TALOS_VERSION_GIT_TAG " " TALOS_VERSION_GIT_HASH_SHORT
 
 } /* namespace ts */
