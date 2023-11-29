@@ -14,3 +14,5 @@
 
 #define TS_SECRET_LASTFM_USER           "yourusername"
 #define TS_SECRET_LASTFM_KEY            "somelargestringofnumbersandletters"
+
+#define TS_SECRET_FIRST_TIME_SETUP_PASSWORD ""

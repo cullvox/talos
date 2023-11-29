@@ -2,7 +2,6 @@
 #include <ArduinoJson.h>
 #include <StreamString.h>
 #include <HTTPClient.h>
-#include <TJpg_Decoder.h>
 
 #include "SlideLastFM.h"
 #include "Print.h"

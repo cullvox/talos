@@ -2,9 +2,6 @@
 
 namespace ts {
 
-class Config {
-public:
-    
-}; 
+static inline const char* hostname = "talos";
 
 } /* namespace ts */
