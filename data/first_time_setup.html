@@ -20,49 +20,55 @@
     </hgroup>
     
     <p>Welcome to TALOS, your personal status device.</p>
-    <p>Let's get you setup.</p>
-
+    <p>Let's get you setup. <i class="fa fa-gear fa-fw" aria-hidden="true"></i></p>
     
 
-    <div class="grid">
-      <article>
-        <header style="padding-bottom: 2%">
-          <h5> <i class="fa fa-wifi fa-fw"></i> Enter your WiFi information</h5>
-        </header>
+    
+    <form action="/done" method="POST">
+      <div class="grid">
+
+        <article>
+          <header style="padding-bottom: 2%">
+            <h5> <i class="fa fa-wifi fa-fw"></i> Enter your WiFi information</h5>
+          </header>
+          
+          <input type="text" id="wifi_ssid" name="wifi_ssid" placeholder="WiFi SSID" required/>
+          <label for="wifi_password">
+            <input type="password" id="wifi_password" name="wifi_password" placeholder="WiFi Password" required />
+            <input type="checkbox" id="wifi_password_show" />
+            Show Password
+          </label>
+
+          <br>
+
+          <label for="wifi_enterprise_checkbox">
+            <input type="checkbox" id="wifi_enterprise_checkbox" />
+            Use Enterprise (WPA2-Enterprise)
+          </label>
+
+          <input type="text" id="wifi_enterprise_identity" name="wifi_enterprise_identity" placeholder="Enterprise Identity" disabled="true" />
+          <input type="text" id="wifi_enterprise_username" name="wifi_enterprise_username" placeholder="Enterprise Username" disabled="true" />
         
-        <input type="text" id="wifi_ssid" name="valid" placeholder="WiFi SSID" />
-        <label for="wifi_password">
-          <input type="password" id="wifi_password" name="valid" placeholder="WiFi Password" />
-          <input type="checkbox" id="wifi_password_show" name="value" />
-          Show Password
-        </label>
+        </article>
 
-        <br>
+        <article>
 
-        <label for="wifi_enterprise_checkbox">
-          <input type="checkbox" id="wifi_enterprise_checkbox" />
-          Use Enterprise (WPA2-Enterprise)
-        </label>
+          <label for="enable_spotify">
+              <input type="checkbox" id="enable_spotify" name="enable_spotify" />
+              Enable Spotify
+              <i class="fa fa-spotify fa-fw" aria-hidden="true"></i>
 
-        <input type="text" id="wifi_enterprise_identity" name="valid" placeholder="Enterprise Identity" disabled="true" />
-        <input type="text" id="wifi_enterprise_username" name="valid" placeholder="Enterprise Username" disabled="true" />
+              <blockquote>
+                <b>IMPORTANT</b><br>
+                In order to finish configuring Spotify, after setup go to <a href="http://talos.local/spotify">http://talos.local/spotify</a> on your device or computer and authorize Spotify.
+              </blockquote>
+          </label>
+        </article>
+      </div>
+
       
-      </article>
-
-      <article>
-
-        <label for="checkbox-2">
-            <input type="checkbox" id="checkbox-2" name="checkbox-2" />
-            Enable Spotify
-
-            <blockquote>
-              In order to finish configuring Spotify, after setup go to <a href="http://talos.local/spotify">http://talos.local/spotify</a> on your device or computer and authorize Spotify.
-            </blockquote>
-        </label>
-      </article>
-    </div>
-    
-    <a href="#" role="button" class="secondary">Finish</a>
+      <button class="secondary">Finish</button>
+    </form>
     <blockquote>
       The first time setup can always be reset via Web Serial at https://cadenmiller.dev/talos.
       An alternative is to recompiling and uploading TALOS at https://github.com/cadenmiller/talos.

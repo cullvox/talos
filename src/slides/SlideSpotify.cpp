@@ -70,7 +70,7 @@ bool SlideSpotify::fetch(Render& render)
 
         _artist = json["item"]["artists"][0]["name"].as<String>();
         _title = json["item"]["name"].as<String>();
-        _currentlyPlaying = json["is_playing"].as<bool>() ? Strings::eNowPlaying : Strings::eWasPlaying;
+        _currentlyPlaying = json["is_playing"].as<bool>() ? Strings::eSpotNowPlaying : Strings::eSpotWasPlaying;
     }
 
 

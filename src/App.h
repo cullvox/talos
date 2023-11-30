@@ -7,6 +7,7 @@
 #include "Render.h"
 #include "Display.h"
 #include "Spotify.h"
+#include "slides/SlideError.h"
 
 namespace ts {
 
@@ -26,8 +27,9 @@ public:
     void shutdown();
 
 private:
+    bool connectToWiFi();
     bool preformFirstTimeSetup();
-    static void setupCallback(AsyncWebServerRequest*);
+    void displayError(Strings::Select primary, Strings::Select secondary);
 
     Preferences _prefs;
     BitmapAlloc _buffer;
@@ -35,7 +37,12 @@ private:
     Display _display;
     State _state;
     AsyncWebServer _server;
+    bool _enableSpotify;
     Spotify _spotify;
+    SlideError _slideError;
+
+    char _wifiSSID[64+1];
+    char _wifiPassword[32+1];
     
 };
 

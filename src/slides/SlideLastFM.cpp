@@ -487,7 +487,7 @@ bool SlideLastFM::fetch(Render& render)
 
 void SlideLastFM::render(Render& render)
 {
-    Strings::Select playingSelect = _currentlyListening ? Strings::eNowPlaying : Strings::eWasPlaying; 
+    Strings::Select playingSelect = _currentlyListening ? Strings::eSpotNowPlaying : Strings::eSpotWasPlaying; 
     
     const int16_t titleY = 480/2;
     const int16_t largeFont = 96;

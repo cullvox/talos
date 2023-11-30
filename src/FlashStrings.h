@@ -27,16 +27,18 @@ public:
         eLoading3,
         eLoading4,
 
-        eErr_Wifi_ConFailed,
-        eErr_Wifi_ConLost,
-        eErr_Wifi_Discon,
-        eErr_Wifi_SsidNotFound,
+        eErrWifiConFailed,
+        eErrWifiConLost,
+        eErrWifiDiscon,
+        eErrWifiSsidNotFound,
         
-        eSol_Reboot,
-        eSol_Wifi_Recon,
-         
-        eNowPlaying,
-        eWasPlaying,
+        eSolReboot,
+        eSolWifiRecon,
+        eSolRestartFTS,
+        
+        eSpotAuthFailed,
+        eSpotNowPlaying,
+        eSpotWasPlaying,
     };
 
     /** @brief Copys a hidden static PROGMEM string to a buffer. */

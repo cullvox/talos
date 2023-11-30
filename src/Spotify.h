@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <AsyncWebSocket.h>
 
 namespace ts {
@@ -13,10 +14,8 @@ struct SpotifyPlayerStatus
 
 class Spotify {
 public:
-    void begin(AsyncWebServer& server);
-    void end();
-
-    bool getPlayerStatus(SpotifyPlayerStatus& status);
+    bool blockingRequestUserAuthorization();
+    bool blockingRequestPlaybackState(SpotifyPlayerStatus& status);
     
 private:
     static void login(AsyncWebServerRequest* request);
@@ -25,7 +24,6 @@ private:
     void sendRequest();
     void requestRefreshToken();
 
-    AsyncWebServer* _server;
     String _authCode;
     char _refreshToken[150];
 };

@@ -24,17 +24,19 @@ TS_PROGMEM_STR(Loading4, "Making Computer Sauces...");
 
 /* Primary */
 TS_PROGMEM_STR(Error, "ERROR");
-TS_PROGMEM_STR(Err_Wifi_ConFailed, "WiFi: Connection Failed");
-TS_PROGMEM_STR(Err_Wifi_ConLost, "WiFi: Connection Lost");
-TS_PROGMEM_STR(Err_Wifi_Discon, "WiFi: Disconnected");
-TS_PROGMEM_STR(Err_Wifi_SsidNotFound, "WiFi: SSID Not Found");
+TS_PROGMEM_STR(ErrWifiConFailed, "WiFi: Connection Failed");
+TS_PROGMEM_STR(ErrWifiConLost, "WiFi: Connection Lost");
+TS_PROGMEM_STR(ErrWifiDiscon, "WiFi: Disconnected");
+TS_PROGMEM_STR(ErrWifiSsidNotFound, "WiFi: SSID Not Found");
 
 /* Secondary */
-TS_PROGMEM_STR(Sol_Wifi_Recon, "Attempting to Reconnect in 30 Seconds");
-TS_PROGMEM_STR(Sol_Reboot, "Rebooting in 30 Seconds");
+TS_PROGMEM_STR(SolWifiRecon, "Attempting to Reconnect in 30 Seconds");
+TS_PROGMEM_STR(SolReboot, "Rebooting in 30 Seconds");
+TS_PROGMEM_STR(SolRestartFTS, "Restarting first time setup in a moment.");
 
-TS_PROGMEM_STR(NowPlaying, "now playing");
-TS_PROGMEM_STR(WasPlaying, "was playing");
+TS_PROGMEM_STR(SpotAuthFailed, "Spotify Authentication Failed");
+TS_PROGMEM_STR(SpotNowPlaying, "now playing");
+TS_PROGMEM_STR(SpotWasPlaying, "was playing");
 
 } /* namespace progmem */
 
@@ -57,16 +59,17 @@ void Strings::copyTo(Select select, char* buf, uint32_t bufMax)
         case eLoading3: return progmem::Loading3;
         case eLoading4: return progmem::Loading4;
         
-        case eErr_Wifi_ConFailed: return progmem::Err_Wifi_ConFailed;
-        case eErr_Wifi_ConLost: return progmem::Err_Wifi_ConLost;
-        case eErr_Wifi_Discon: return progmem::Err_Wifi_Discon; 
-        case eErr_Wifi_SsidNotFound: return progmem::Err_Wifi_SsidNotFound; 
+        case eErrWifiConFailed: return progmem::ErrWifiConFailed;
+        case eErrWifiConLost: return progmem::ErrWifiConLost;
+        case eErrWifiDiscon: return progmem::ErrWifiDiscon; 
+        case eErrWifiSsidNotFound: return progmem::ErrWifiSsidNotFound; 
         
-        case eSol_Reboot: return progmem::Sol_Reboot;
-        case eSol_Wifi_Recon: return progmem::Sol_Wifi_Recon;
+        case eSolReboot: return progmem::SolReboot;
+        case eSolWifiRecon: return progmem::SolWifiRecon;
+        case eSolRestartFTS: return progmem::SolRestartFTS;
 
-        case eNowPlaying: return progmem::NowPlaying;
-        case eWasPlaying: return progmem::WasPlaying;
+        case eSpotNowPlaying: return progmem::SpotNowPlaying;
+        case eSpotWasPlaying: return progmem::SpotWasPlaying;
 
         default:
             TS_ERROR("Invalid flashed string selection!");
