@@ -11,13 +11,6 @@
 
 namespace ts {
 
-enum class State {
-    eFirstTimeSetup = -1,
-    eInit,
-    eRunning,
-    eShutdown,
-};
-
 class App {
 public:
     App();
@@ -29,21 +22,26 @@ public:
 private:
     bool connectToWiFi();
     bool preformFirstTimeSetup();
+    bool preformSpotifyAuthorization();
     void displayError(Strings::Select primary, Strings::Select secondary);
 
     Preferences _prefs;
     BitmapAlloc _buffer;
     Render _render;
     Display _display;
-    State _state;
+    SlideError _slideGeneral;
     AsyncWebServer _server;
-    bool _enableSpotify;
     Spotify _spotify;
-    SlideError _slideError;
 
-    char _wifiSSID[64+1];
-    char _wifiPassword[32+1];
-    
+    struct Config {
+        bool isFirstTimeSetup;
+        char wifiSSID[64+1];
+        char wifiPassword[32+1];
+        bool spotifyEnabled;
+        bool spotifyAuthorized;
+    };
+
+    Config _config;
 };
 
 } /* namespace ts */

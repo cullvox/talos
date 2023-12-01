@@ -1,4 +1,4 @@
-#include "SlideError.h"
+#include "SlideGeneral.h"
 
 namespace ts {
 
@@ -7,7 +7,7 @@ template <typename T> T CLAMP(const T& value, const T& low, const T& high)
     return value < low ? low : (value > high ? high : value); 
 }
 
-void SlideError::render(Render& render)
+void SlideGeneral::render(Render& render)
 {
     /* draw title */
     render
@@ -16,8 +16,7 @@ void SlideError::render(Render& render)
         .setFillColor(Color::eBlack)
         .setCursor(Vector2i{10, 10})
         .setFontSize(145)
-
-        .drawTextFromFlash(Strings::eError);
+        .drawTextFromFlash(_severity);
 
     /* draw the large data */
     
@@ -41,12 +40,17 @@ void SlideError::render(Render& render)
 
 }
 
-void SlideError::setPrimary(Strings::Select selection) 
+void SlideGeneral::setSeverity(Strings::Select selection)
+{
+    _severity = selection;
+}
+
+void SlideGeneral::setPrimary(Strings::Select selection) 
 { 
     Strings::copyTo(selection, _primary, sizeof(_primary)-1); 
 }
 
-void SlideError::setSecondary(Strings::Select selection) 
+void SlideGeneral::setSecondary(Strings::Select selection) 
 {
     Strings::copyTo(selection, _secondary, sizeof(_secondary)-1); 
 }

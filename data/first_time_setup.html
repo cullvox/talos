@@ -22,9 +22,7 @@
     <p>Welcome to TALOS, your personal status device.</p>
     <p>Let's get you setup. <i class="fa fa-gear fa-fw" aria-hidden="true"></i></p>
     
-
-    
-    <form action="/done" method="POST">
+    <form action="/done" method="post" id="setup_form">
       <div class="grid">
 
         <article>
@@ -35,14 +33,14 @@
           <input type="text" id="wifi_ssid" name="wifi_ssid" placeholder="WiFi SSID" required/>
           <label for="wifi_password">
             <input type="password" id="wifi_password" name="wifi_password" placeholder="WiFi Password" required />
-            <input type="checkbox" id="wifi_password_show" />
+            <input type="checkbox" id="wifi_password_show" onchange="togglePassword()" />
             Show Password
           </label>
 
           <br>
 
           <label for="wifi_enterprise_checkbox">
-            <input type="checkbox" id="wifi_enterprise_checkbox" />
+            <input type="checkbox" id="wifi_enterprise_checkbox" onchange="toggleEnterprise()" />
             Use Enterprise (WPA2-Enterprise)
           </label>
 
@@ -67,11 +65,77 @@
       </div>
 
       
-      <button class="secondary">Finish</button>
+      <button type="submit" class="secondary">Finish</button>
     </form>
     <blockquote>
-      The first time setup can always be reset via Web Serial at https://cadenmiller.dev/talos.
+      The first time setup can always be reset via Web Serial at https://cadenmiller.dev/talos.<br>
       An alternative is to recompiling and uploading TALOS at https://github.com/cadenmiller/talos.
     </blockquote>
   </main>
 </html>
+
+<script>
+  const checkEnterprise = document.getElementById("wifi_enterprise_checkbox");
+  const checkPassword = document.getElementById("wifi_password_show");
+  const inputPassword = document.getElementById("wifi_password");
+  const inputEnterpriseIdentity = document.getElementById("wifi_enterprise_identity");
+  const inputEnterpriseUsername = document.getElementById("wifi_enterprise_username");
+
+  function togglePassword()
+  {
+    inputPassword.setAttribute("type", checkPassword.checked ? "text" : "password");
+  }
+
+  function toggleEnterprise()
+  {
+    inputEnterpriseIdentity.disabled = !checkEnterprise.checked;
+    inputEnterpriseUsername.disabled = !checkEnterprise.checked;
+  }
+
+  const generateRandomString = (length) => {
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const values = crypto.getRandomValues(new Uint8Array(length));
+    return values.reduce((acc, x) => acc + possible[x % possible.length], "");
+  }
+
+  const codeVerifier = generateRandomString(64);
+
+  const sha256 = async (plain) => {
+    const encoder = new TextEncoder()
+    const data = encoder.encode(plain)
+    return window.crypto.subtle.digest('SHA-256', data)
+  }
+
+  const base64encode = (input) => {
+    return btoa(String.fromCharCode(...new Uint8Array(input)))
+      .replace(/=/g, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+  }
+
+  const hashed = await sha256(codeVerifier)
+  const codeChallenge = base64encode(hashed);
+
+  const clientId = 'YOUR_CLIENT_ID';
+  const redirectUri = 'http://localhost:8080';
+
+  const scope = 'user-read-private user-read-email';
+  const authUrl = new URL("https://accounts.spotify.com/authorize")
+
+  // generated in the previous step
+  window.localStorage.setItem('code_verifier', codeVerifier);
+
+  const params =  {
+    response_type: 'code',
+    client_id: clientId,
+    scope,
+    code_challenge_method: 'S256',
+    code_challenge: codeChallenge,
+    redirect_uri: redirectUri,
+  }
+
+  authUrl.search = new URLSearchParams(params).toString();
+  window.location.href = authUrl.toString();
+
+  /* Generates a Spotify PKCE authorization link. */
+</script>

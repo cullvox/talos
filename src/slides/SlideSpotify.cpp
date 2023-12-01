@@ -22,7 +22,7 @@ bool SlideSpotify::fetch(Render& render)
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
     int httpCode = 0;
-    httpCode = http.POST("grant_type=client_credentials&client_id=" TS_SECRET_SPOTIFY_CLIENT_ID "&client_secret=" TS_SECRET_SPOTIFY_CLIENT_SECRET);
+    // httpCode = http.POST("grant_type=client_credentials&client_id=" TS_SECRET_SPOTIFY_CLIENT_ID "&client_secret=" TS_SECRET_SPOTIFY_CLIENT_SECRET);
 
     String payload = http.getString();
     http.end();

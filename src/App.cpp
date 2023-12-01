@@ -70,23 +70,32 @@ bool App::init()
 
     _prefs.begin("talos");
 
-    /* In the case of a first time setup, don't show the initial screen. */
-    if (_prefs.getBool("fts", true))
-    {
-        if (!preformFirstTimeSetup()) return false;
-    }
+    _config.isFirstTimeSetup = _prefs.getBool("fts", true))
+    _config.spotifyEnabled = _prefs.getBool("spotenable", false);
+    _config.spotifyAuthorized = _prefs.getBool("spotauthed", false);
 
     _prefs.end();
+
+    /* Preform the first time setup. */
+    if (_config.isFirstTimeSetup)
+    {
+        if (!preformFirstTimeSetup()) return false;
+        // _prefs.putBool("fts", false);
+    }
+
+    /* Preform authentication for Spotify. */
+    if (_config.epotifyEnabled && !_config.spotifyAuthorized)
+    {
+        if (!preformSpotifyAuthorization()) return false;
+    }
+
+    /* Display the TALOS splash screen. */
+
 
     return true;
     // MDNS.begin(ts::hostname);
 
 }
-
-const char* responseHTML PROGMEM = ""
-        "<!DOCTYPE html><html><head><title>CaptivePortal</title></head><body>"
-        "<h1>TALOS</h1><p>This is a captive portal example. All requests will "
-        "be redirected here.</p></body></html>";
 
 class CaptiveRequestHandler : public AsyncWebHandler
 {
@@ -118,7 +127,7 @@ bool App::connectToWiFi()
     if (TS_SECRET_WIFI_USE_ENTERPRISE) {
         WiFi.begin(SSID, Auth, Identity, Username, Password);
     } else {
-        WiFi.begin(_wifiSSID, _wifiPassword);
+        WiFi.begin(_config.wifiSSID, _config.wifiPassword);
     }
 
     TS_INFO("Connecting to WiFi\n");
@@ -172,6 +181,10 @@ startFirstTimeSetup:
     TS_INFO("=======================================\n");
     TS_INFO("\n");
 
+    /* Display to the user that FTS is about to happen. */
+    _slideGeneral.setSeverity(Strings::eSeverityInfo);
+    _slideGeneral.setPrimary(Strings::e)
+
     /* Start the access point. */
     String pass = "ABC1234567";
     String ssid = F("TALOS_");
@@ -201,37 +214,21 @@ startFirstTimeSetup:
         for (int i = 0; i < params; i++) {
             AsyncWebParameter* p = request->getParam(i);
             TS_INFOF("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+
+            if (p->name() == "wifi_ssid")
+                p->value().getBytes((unsigned char*)_config.wifiSSID, sizeof(_config.wifiSSID)-1);
+            
+            if (p->name() == "wifi_password")
+                p->value().getBytes((unsigned char*)_config.wifiPassword, sizeof(_config.wifiPassword)-1);
+
+            if (p->name() == "enable_spotify")
+                _config.enableSpotify = true; /* data race shouldn't occur here... hopefully.  */
         }
 
-        /* Process the parameters received. */
-        AsyncWebParameter* param = request->getParam("wifi_ssid");
-        if (!param)
-        {
-            TS_ERROR("Expected parameter wifi_ssid not found in form!");
-            request->send(200, "text/http", "<html><p>Work is just about done!</p></html>");
-            return;
-        }
-
-        param->value().getBytes((unsigned char*)_wifiSSID, sizeof(_wifiSSID)-1);
-
-        param = request->getParam("wifi_password");
-        if (!param)
-        {
-            TS_ERROR("Expected parameter wifi_password not found in form!");
-            request->send(200, "text/http", "<html><p>Work is just about done!</p></html>");
-            return;
-        }
-        
-        param->value().getBytes((unsigned char*)_wifiPassword, sizeof(_wifiPassword)-1);
-
-        param = request->getParam("enable_spotify");
-        if (param) _enableSpotify = true; /* data race shouldn't occur here... hopefully.  */
-
-        TS_INFOF("Recieved Wi-Fi SSID: %s, Password: %s\n", _wifiSSID, _wifiPassword);
+        TS_INFOF("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.wifiSSID, _config.wifiPassword);
 
         finished = true;
         request->send(200, "text/http", "<html><p>Work is just about done!</p></html>");
-        
     });
 
     _server.on("/css/pico.min.css", HTTP_GET, [](AsyncWebServerRequest* request){
@@ -266,10 +263,10 @@ startFirstTimeSetup:
     }
 
     /* Establish authorization with spotify. */
-    if (_enableSpotify)
+    if (_config.enableSpotify)
     {
         
-        if (!_spotify.blockingRequestUserAuthorization())
+        if (!preformSpotifyAuthorization())
         {
             /* Display to the user that first time setup is restarting. */
             displayError(Strings::eSpotAuthFailed, Strings::eSolRestartFTS);    
@@ -293,6 +290,79 @@ startFirstTimeSetup:
 displayError:
 
     goto startFirstTimeSetup;    
+
+}
+
+bool App::preformSpotifyAuthorization()
+{
+
+    TS_INFO("Beginning Spotify authentication process.\n");
+
+    /* Add spotify callbacks for the authentication process. */
+    std::atomic<bool> finished;
+
+    /* Start MDNS for to use talos.local for Spotify config. */
+    TS_INFO("Beginning MDNS.\n");
+    MDNS.begin("talos");
+
+    TS_INFO("Beginning Web Server.\n");
+    AsyncWebServer server(80);
+
+    server.on("/spotify", HTTP_GET, [](AsyncWebServerRequest* request){
+        /* Generate a random state value. */
+        const int stateLength = 16;
+        char state[stateLength+1];
+        memset(state, 0, sizeof(state));
+        esp_fill_random(state, sizeof(state)-1);
+
+        /* Spotify scope of TALOS. */
+        const __FlashStringHelper* scope = 
+          F("user-read-private+"
+            "user-read-currently-playing+"
+            "user-read-playback-state");
+
+        /* Redirect Spotify's API to the spotify_callback to receive the code. */
+        const __FlashStringHelper* redirect = F("http://talos.local/spotify_callback");
+
+        /* Build the Spotify redirect for authorization. */
+        String url;
+        url.reserve(400);
+        url.concat(F("https://accounts.spotify.com/authorize/?response_type=code&scope="));
+        url.concat(scope);
+        url.concat(F("&redirect_uri="));
+        url.concat(redirect);
+        url.concat(F("&state="));
+        url.concat(state);
+
+        request->redirect(url);
+    });
+
+    server.on("/spotify_callback", HTTP_POST, [&finished](AsyncWebServerRequest* request){
+
+        /* Retrieve the spotify access code. */
+        AsyncWebParameter* code = request->getParam("code");
+        if (!code)
+        {
+            TS_ERROR("Could not find Spotify access code in callback!");
+            return;
+        }
+        
+        String spotifyCode = code->value();
+        TS_INFOF("Received authorization code from Spotify: %s\n", spotifyCode.c_str());
+
+        finished = true;
+    });
+
+    TS_INFO("Beginning server!\n");
+
+    server.begin();
+
+    /* Wait until authentication is complete. */
+    while (!finished) {}
+
+    /* Cleanup server stuffs. */
+    server.end();
+    MDNS.end();
 
 }
 

@@ -16,11 +16,10 @@ class Spotify {
 public:
     bool blockingRequestUserAuthorization();
     bool blockingRequestPlaybackState(SpotifyPlayerStatus& status);
+    void addServerCallbacks(AsyncWebServer& server);
+    String generateAuthLink();
     
 private:
-    static void login(AsyncWebServerRequest* request);
-    static void callback(AsyncWebServerRequest* request);
-
     void sendRequest();
     void requestRefreshToken();
 

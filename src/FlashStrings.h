@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#define TS_FLASH_STRINGS_MAX_LENGTH 128 /* Does not include null-terminator. */
+
 namespace ts {
 
 /** @brief Holds and provides function for strings stored in flash memory.
@@ -15,11 +17,15 @@ public:
 
     /** @brief Enum values representing valid string responses. */
     enum Select {
-        eTitle,
-        eTitleFull,
-        eCredit,
+        eTitle,         /* TALOS */
+        eTitleFull,     /* Time and Ambient Locale Output System*/
+        eCredit,        /* by Caden Miller */
         eVersion,
-        eError,
+
+        eSetupBeginning,      /* First Time Setup */
+        eSetupJoinWifi,       /* To start join TALOS_##'s WiFi on your device */
+        eSetupAlmostDone,     /* You're almost done */
+        eSetupSpotToContinue, /* To finish setup login to Spotify */
 
         eLoading0,
         eLoading1,
@@ -27,18 +33,21 @@ public:
         eLoading3,
         eLoading4,
 
+        eSeverityError, /* ERROR */
+        eSeverityInfo,  /* INFO */
+
         eErrWifiConFailed,
         eErrWifiConLost,
         eErrWifiDiscon,
         eErrWifiSsidNotFound,
+        eErrSpotAuthFailed,
         
         eSolReboot,
         eSolWifiRecon,
         eSolRestartFTS,
         
-        eSpotAuthFailed,
-        eSpotNowPlaying,
-        eSpotWasPlaying,
+        ePlaybackNowPlaying,
+        ePlaybackWasPlaying,
     };
 
     /** @brief Copys a hidden static PROGMEM string to a buffer. */
