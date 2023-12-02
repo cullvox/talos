@@ -2,12 +2,13 @@
 
 #include <Preferences.h>
 #include <AsyncWebSocket.h>
+#include <ESPAsync_WiFiManager.hpp>
 
 #include "Bitmap.h"
 #include "Render.h"
 #include "Display.h"
 #include "Spotify.h"
-#include "slides/SlideError.h"
+#include "slides/SlideGeneral.h"
 
 namespace ts {
 
@@ -23,14 +24,17 @@ private:
     bool connectToWiFi();
     bool preformFirstTimeSetup();
     bool preformSpotifyAuthorization();
-    void displayError(Strings::Select primary, Strings::Select secondary);
+    void displayGeneral(Strings::Select severity, Strings::Select primary, Strings::Select secondary);
+    static void generateSpotifyCodeVerifier(char* codeVerifier, uint32_t codeLength);
 
     Preferences _prefs;
     BitmapAlloc _buffer;
     Render _render;
     Display _display;
-    SlideError _slideGeneral;
+    SlideGeneral _slideGeneral;
     AsyncWebServer _server;
+    AsyncDNSServer _dnsServer;
+    // ESPAsync_WiFiManager _wifiManager;
     Spotify _spotify;
 
     struct Config {

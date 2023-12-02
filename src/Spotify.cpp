@@ -18,17 +18,4 @@ bool Spotify::blockingRequestPlaybackState(SpotifyPlayerStatus& status)
 }
 
 
-void Spotify::login(AsyncWebServerRequest* request)
-{
-
-
-}
-
-void Spotify::callback(AsyncWebServerRequest* request)
-{
-    
-
-
-}
-
 } /* namespace ts */

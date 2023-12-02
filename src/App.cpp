@@ -7,6 +7,8 @@
 #include <ESPmDNS.h>
 #include <DNSServer.h>
 #include <SPIFFS.h>
+#include <mbedtls/sha256.h>
+#include <base64.h>
 
 #include <esp_ota_ops.h>
 
@@ -24,8 +26,8 @@ App::App()
     : _buffer(ts::Display::extent)
     , _server(80)
 {
-    memset(_wifiSSID, 0, sizeof(_wifiSSID));
-    memset(_wifiPassword, 0, sizeof(_wifiPassword));
+    memset(_config.wifiSSID, 0, sizeof(_config.wifiSSID));
+    memset(_config.wifiPassword, 0, sizeof(_config.wifiPassword));
 }
 
 bool App::init()
@@ -70,7 +72,7 @@ bool App::init()
 
     _prefs.begin("talos");
 
-    _config.isFirstTimeSetup = _prefs.getBool("fts", true))
+    _config.isFirstTimeSetup = _prefs.getBool("fts", true);
     _config.spotifyEnabled = _prefs.getBool("spotenable", false);
     _config.spotifyAuthorized = _prefs.getBool("spotauthed", false);
 
@@ -79,12 +81,13 @@ bool App::init()
     /* Preform the first time setup. */
     if (_config.isFirstTimeSetup)
     {
+
         if (!preformFirstTimeSetup()) return false;
         // _prefs.putBool("fts", false);
     }
 
     /* Preform authentication for Spotify. */
-    if (_config.epotifyEnabled && !_config.spotifyAuthorized)
+    if (_config.spotifyEnabled && !_config.spotifyAuthorized)
     {
         if (!preformSpotifyAuthorization()) return false;
     }
@@ -147,7 +150,7 @@ bool App::connectToWiFi()
             //slideError.setPrimary(ts::Strings::eErr_Wifi_ConFailed);
             goto Err_ConnectFailed;
         case WL_NO_SSID_AVAIL: 
-            TS_INFO("No WiFi SSID: %s Found");
+            TS_INFO("No WiFi SSID: %s Found\n");
             // slideError.setPrimary(ts::Strings::eErr_Wifi_SsidNotFound);
             goto Err_ConnectFailed;
         default: break;
@@ -182,79 +185,73 @@ startFirstTimeSetup:
     TS_INFO("\n");
 
     /* Display to the user that FTS is about to happen. */
-    _slideGeneral.setSeverity(Strings::eSeverityInfo);
-    _slideGeneral.setPrimary(Strings::e)
+    displayGeneral(Strings::eSeverityInfo, Strings::eSetupBeginning, Strings::eSetupJoinWifi);
 
     /* Start the access point. */
     String pass = "ABC1234567";
     String ssid = F("TALOS_");
     ssid.concat(WiFi.macAddress().substring(3, 5));
 
-    IPAddress apip{192, 168, 1, 1};
-    WiFi.softAPConfig(apip, apip, IPAddress{255, 255, 255, 0});
-    if (!WiFi.softAP(ssid, pass))
-    {
-        TS_ERROR("Could not begin first-time-setup access point!\n");
-        return false;
-    }
+    WiFi.softAP(ssid, pass);
 
-    TS_INFOF("Access point started with name: %s, IP: %s, MAC: %s\n", ssid, apip.toString().c_str(), WiFi.macAddress().c_str());
+    /* Start the DNS server to catch all for the captive portal. */
+    _dnsServer.start(53, "*", WiFi.softAPIP());
 
-    /* Start a DNS server to create a captive portal. */
-    DNSServer dnsServer;
-    dnsServer.start(53, "*", apip);
+
+    /* TODO: Display the actual SSID in displayGeneral some how. */
+    
+  
+
     
     /* Setup the server callbacks and begin. */
-    std::atomic<bool> finished = false;
-
-    _server.on("/done", HTTP_POST, [&](AsyncWebServerRequest* request){
-        
-        /* Retrieve the WiFi SSID, password, username and identity. */
-        int params = request->params();
-        for (int i = 0; i < params; i++) {
-            AsyncWebParameter* p = request->getParam(i);
-            TS_INFOF("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
-
-            if (p->name() == "wifi_ssid")
-                p->value().getBytes((unsigned char*)_config.wifiSSID, sizeof(_config.wifiSSID)-1);
-            
-            if (p->name() == "wifi_password")
-                p->value().getBytes((unsigned char*)_config.wifiPassword, sizeof(_config.wifiPassword)-1);
-
-            if (p->name() == "enable_spotify")
-                _config.enableSpotify = true; /* data race shouldn't occur here... hopefully.  */
-        }
-
-        TS_INFOF("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.wifiSSID, _config.wifiPassword);
-
-        finished = true;
-        request->send(200, "text/http", "<html><p>Work is just about done!</p></html>");
-    });
-
-    _server.on("/css/pico.min.css", HTTP_GET, [](AsyncWebServerRequest* request){
-        request->send(SPIFFS, "/css/pico.min.css", "text/css");
-    });
-    
-    _server.on("/css/font-awesome.min.css", HTTP_GET, [](AsyncWebServerRequest* request){
-        request->send(SPIFFS, "/css/font-awesome.min.css", "text/css");
-    });
-
-    _server.on("/fonts/fontawesome-webfont.ttf", HTTP_GET, [](AsyncWebServerRequest* request){
-        request->send(SPIFFS, "/fonts/fontawesome-webfont.ttf");
-    });
-
-    _server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
+     std::atomic<bool> finished = false;
+ 
+     _server.on("/done", HTTP_POST, [&](AsyncWebServerRequest* request){
+         
+         /* Retrieve the WiFi SSID, password, username and identity. */
+         int params = request->params();
+         for (int i = 0; i < params; i++) {
+             AsyncWebParameter* p = request->getParam(i);
+             TS_INFOF("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+ 
+             if (p->name() == "wifi_ssid")
+                 p->value().getBytes((unsigned char*)_config.wifiSSID, sizeof(_config.wifiSSID)-1);
+             
+             if (p->name() == "wifi_password")
+                 p->value().getBytes((unsigned char*)_config.wifiPassword, sizeof(_config.wifiPassword)-1);
+ 
+             if (p->name() == "enable_spotify")
+                 _config.spotifyEnabled = true; /* data race shouldn't occur here... hopefully.  */
+         }
+ 
+         TS_INFOF("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.wifiSSID, _config.wifiPassword);
+ 
+         finished = true;
+         request->send(200, "text/http", "<html><p>Work is just about done!</p></html>");
+     });
+ 
+     _server.on("/css/pico.min.css", HTTP_GET, [](AsyncWebServerRequest* request){
+         request->send(SPIFFS, "/css/pico.min.css", "text/css");
+     });
+     
+     _server.on("/css/font-awesome.min.css", HTTP_GET, [](AsyncWebServerRequest* request){
+         request->send(SPIFFS, "/css/font-awesome.min.css", "text/css");
+     });
+ 
+     _server.on("/fonts/fontawesome-webfont.ttf", HTTP_GET, [](AsyncWebServerRequest* request){
+         request->send(SPIFFS, "/fonts/fontawesome-webfont.ttf");
+     });
+ 
+     _server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
+ 
     _server.begin();
+ 
+     while (!finished) { }
+ 
+     WiFi.softAPdisconnect(true);
 
-    /* Process DNS requests for captive request until setup is consitered complete. */
-    while (!finished) {
-        dnsServer.processNextRequest();
-    };
-    
-    _server.end();
+    _dnsServer.stop();
     _server.reset();
-    dnsServer.stop();
-    WiFi.softAPdisconnect();
 
     /* Attempt to connect to the persons wifi. */
     if (!connectToWiFi()) {
@@ -263,13 +260,12 @@ startFirstTimeSetup:
     }
 
     /* Establish authorization with spotify. */
-    if (_config.enableSpotify)
+    if (_config.spotifyEnabled)
     {
-        
         if (!preformSpotifyAuthorization())
         {
             /* Display to the user that first time setup is restarting. */
-            displayError(Strings::eSpotAuthFailed, Strings::eSolRestartFTS);    
+            displayGeneral(Strings::eSeverityError, Strings::eErrSpotAuthFailed, Strings::eSolRestartFTS);    
             goto startFirstTimeSetup;
         }
     }
@@ -299,45 +295,69 @@ bool App::preformSpotifyAuthorization()
     TS_INFO("Beginning Spotify authentication process.\n");
 
     /* Add spotify callbacks for the authentication process. */
-    std::atomic<bool> finished;
+    std::atomic<bool> finished = false;
 
     /* Start MDNS for to use talos.local for Spotify config. */
     TS_INFO("Beginning MDNS.\n");
     MDNS.begin("talos");
 
-    TS_INFO("Beginning Web Server.\n");
-    AsyncWebServer server(80);
+    TS_INFOF("Beginning Web Server. %d\n", ESP.getFreeHeap());
 
-    server.on("/spotify", HTTP_GET, [](AsyncWebServerRequest* request){
+    _server.on("/spotify", HTTP_GET, [](AsyncWebServerRequest* request){
+        
         /* Generate a random state value. */
-        const int stateLength = 16;
-        char state[stateLength+1];
-        memset(state, 0, sizeof(state));
-        esp_fill_random(state, sizeof(state)-1);
+        const int codeVerifierLength = 64;
+        char codeVerifier[codeVerifierLength+1];
+        
+        generateSpotifyCodeVerifier(codeVerifier, codeVerifierLength);
 
-        /* Spotify scope of TALOS. */
-        const __FlashStringHelper* scope = 
-          F("user-read-private+"
-            "user-read-currently-playing+"
-            "user-read-playback-state");
+        char codeVerifierSha[32];
+
+        mbedtls_sha256_context ctx;
+        mbedtls_sha256_init(&ctx);
+        mbedtls_sha256_starts(&ctx, false);
+        mbedtls_sha256_update(&ctx, (unsigned char*)codeVerifier, codeVerifierLength);
+        mbedtls_sha256_finish(&ctx, (unsigned char*)codeVerifierSha);
+        mbedtls_sha256_free(&ctx);
+
+        String codeVerifierShaBase64 = base64::encode((uint8_t*)codeVerifierSha, sizeof(codeVerifierSha));
+        codeVerifierShaBase64.replace('+', '-');
+        codeVerifierShaBase64.replace('/', '_');
+
+        char spotifyCodeChallenge[44] = "";
+        strncpy(spotifyCodeChallenge, codeVerifierShaBase64.c_str(), 43);
+
+  
 
         /* Redirect Spotify's API to the spotify_callback to receive the code. */
-        const __FlashStringHelper* redirect = F("http://talos.local/spotify_callback");
-
+  
         /* Build the Spotify redirect for authorization. */
         String url;
-        url.reserve(400);
-        url.concat(F("https://accounts.spotify.com/authorize/?response_type=code&scope="));
-        url.concat(scope);
-        url.concat(F("&redirect_uri="));
-        url.concat(redirect);
-        url.concat(F("&state="));
-        url.concat(state);
+        url.reserve(500);
+        url.concat(
+            F("https://accounts.spotify.com/authorize/?"
+            "response_type=code"
+            "&client_id=" TS_SECRET_SPOTIFY_CLIENT_ID
+            "&scope="
+                "user-read-private+"
+                "user-read-currently-playing+"
+                "user-read-playback-state"
+            "&redirect_uri=http%3A%2F%2Ftalos.local/spotify_callback"
+            "&code_challenge_method=S256"
+            "&code_challenge="));
+        url.concat(spotifyCodeChallenge);
+        
+        // url.concat(redirect);
+
+
+        TS_INFOF("Spotify redirect URL generated as: %s", url.c_str());
 
         request->redirect(url);
     });
 
-    server.on("/spotify_callback", HTTP_POST, [&finished](AsyncWebServerRequest* request){
+    _server.on("/spotify_callback", HTTP_GET, [&finished](AsyncWebServerRequest* request){
+
+        TS_INFO("Received callback from Spotify\n");
 
         /* Retrieve the spotify access code. */
         AsyncWebParameter* code = request->getParam("code");
@@ -353,26 +373,38 @@ bool App::preformSpotifyAuthorization()
         finished = true;
     });
 
-    TS_INFO("Beginning server!\n");
-
-    server.begin();
+    _server.on("/", [](AsyncWebServerRequest* req){
+        return;
+    });
 
     /* Wait until authentication is complete. */
-    while (!finished) {}
+    while (!finished) { }
 
     /* Cleanup server stuffs. */
-    server.end();
+    _server.end();
     MDNS.end();
 
 }
 
-void App::displayError(Strings::Select primary, Strings::Select secondary)
+void App::displayGeneral(Strings::Select severity, Strings::Select primary, Strings::Select secondary)
 {
-    _slideError.setPrimary(primary);
-    _slideError.setSecondary(secondary);
+    _slideGeneral.setSeverity(severity);
+    _slideGeneral.setPrimary(primary);
+    _slideGeneral.setSecondary(secondary);
     _buffer.clear();
-    _slideError.render(_render);
+    _slideGeneral.render(_render);
     _display.present(_buffer.data());
+}
+
+void App::generateSpotifyCodeVerifier(char* codeVerifier, uint32_t codeLength)
+{
+    const char* possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+    for (int i = 0; i < codeLength; i++)
+    {
+        uint32_t index = esp_random() % (sizeof(possible)-1);
+        codeVerifier[i] = possible[i];
+    }
 }
 
 } /* namespace ts */
