@@ -23,11 +23,15 @@
 namespace ts {
 
 App::App()
-    : _buffer(ts::Display::extent)
+    : _display()
+    , _buffer(_display.extent())
     , _server(80)
 {
     memset(_config.wifiSSID, 0, sizeof(_config.wifiSSID));
     memset(_config.wifiPassword, 0, sizeof(_config.wifiPassword));
+    memset(_config.wifiIdentity, 0, sizeof(_config.wifiIdentity));
+    memset(_config.wifiUsername, 0, sizeof(_config.wifiUsername));
+    _config.isWifiEnterprise = false;
 }
 
 bool App::init()
@@ -56,19 +60,19 @@ bool App::init()
 
     /* Initialize the display and graphics operations. */
     _render.setBitmap(_buffer);
-    if (!_render.loadFont(Neuton_Regular, sizeof(Neuton_Regular)))
+    ffsupport_setffs(SPIFFS);
+    if (!_render.loadFont("/fonts/Neuton-Regular.ttf"))
     {
         TS_ERROR("Could not load default font!\n");
         return false;
     }
 
-    SPI.begin(ts::Pin::SpiClk, ts::Pin::SpiCipo, ts::Pin::SpiCopi, ts::Pin::PaperSpiCs);
-    if (!_display.begin(ts::Pin::PaperSpiCs, ts::Pin::PaperRst, ts::Pin::PaperDc, ts::Pin::PaperBusy, ts::Pin::PaperPwr)) 
+    SPI.begin(TS_PIN_SPI_CLK, TS_PIN_SPI_CIPO, TS_PIN_SPI_COPI, TS_PIN_PAPER_SPI_CS);
+    if (!_display.begin(TS_PIN_PAPER_SPI_CS, TS_PIN_PAPER_RST, TS_PIN_PAPER_DC, TS_PIN_PAPER_BUSY, TS_PIN_PAPER_PWR)) 
     {
         TS_INFO("e-Paper Initialization Failed!\n");
         return false;
     }
-
 
     _prefs.begin("talos");
 
@@ -96,8 +100,6 @@ bool App::init()
 
 
     return true;
-    // MDNS.begin(ts::hostname);
-
 }
 
 class CaptiveRequestHandler : public AsyncWebHandler
@@ -120,15 +122,9 @@ public:
 
 bool App::connectToWiFi()
 {
-
-    const char* SSID = TS_SECRET_WIFI_SSID;
-    const char* Password = TS_SECRET_WIFI_PASSWORD;
-    const char* Username = TS_SECRET_WIFI_USERNAME;
-    const char* Identity = TS_SECRET_WIFI_IDENTITY;
-    wpa2_auth_method_t Auth = TS_SECRET_WIFI_WAP2_AUTH;
-
-    if (TS_SECRET_WIFI_USE_ENTERPRISE) {
-        WiFi.begin(SSID, Auth, Identity, Username, Password);
+    if (_config.isWifiEnterprise) {
+        log_i("Using Enterprise, SSID: %s, Identitiy: %s, Username %s, Password: %s", _config.wifiSSID, _config.wifiIdentity, _config.wifiUsername, _config.wifiPassword);
+        WiFi.begin(_config.wifiSSID, WPA2_AUTH_PEAP, _config.wifiIdentity, _config.wifiUsername, _config.wifiPassword);
     } else {
         WiFi.begin(_config.wifiSSID, _config.wifiPassword);
     }
@@ -195,7 +191,8 @@ startFirstTimeSetup:
     WiFi.softAP(ssid, pass);
 
     /* Start the DNS server to catch all for the captive portal. */
-    _dnsServer.start(53, "*", WiFi.softAPIP());
+    DNSServer dnsServer;
+    dnsServer.start(53, "*", WiFi.softAPIP());
 
 
     /* TODO: Display the actual SSID in displayGeneral some how. */
@@ -204,31 +201,41 @@ startFirstTimeSetup:
 
     
     /* Setup the server callbacks and begin. */
-     std::atomic<bool> finished = false;
+    std::atomic<bool> finished(false);
+
+    _server.on("/done", HTTP_POST, [&](AsyncWebServerRequest* request){
+        
+        /* Retrieve the WiFi SSID, password, username and identity. */
+        int params = request->params();
+        for (int i = 0; i < params; i++) {
+            AsyncWebParameter* p = request->getParam(i);
+            TS_INFOF("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+
+            if (p->name() == "wifi_ssid")
+                p->value().getBytes((unsigned char*)_config.wifiSSID, sizeof(_config.wifiSSID)-1);
+            
+            if (p->name() == "wifi_password")
+                p->value().getBytes((unsigned char*)_config.wifiPassword, sizeof(_config.wifiPassword)-1);
  
-     _server.on("/done", HTTP_POST, [&](AsyncWebServerRequest* request){
-         
-         /* Retrieve the WiFi SSID, password, username and identity. */
-         int params = request->params();
-         for (int i = 0; i < params; i++) {
-             AsyncWebParameter* p = request->getParam(i);
-             TS_INFOF("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+            if (p->name() == "wifi_enterprise_username") {
+                _config.isWifiEnterprise = true;
+                p->value().getBytes((unsigned char*)_config.wifiUsername, sizeof(_config.wifiUsername)-1);
+            }
+
+            if (p->name() == "wifi_enterprise_identity") {
+                _config.isWifiEnterprise = true;
+                p->value().getBytes((unsigned char*)_config.wifiIdentity, sizeof(_config.wifiIdentity)-1);
+            }
+
+            if (p->name() == "enable_spotify")
+                _config.spotifyEnabled = true; /* data race shouldn't occur here... hopefully.  */
+        }
  
-             if (p->name() == "wifi_ssid")
-                 p->value().getBytes((unsigned char*)_config.wifiSSID, sizeof(_config.wifiSSID)-1);
-             
-             if (p->name() == "wifi_password")
-                 p->value().getBytes((unsigned char*)_config.wifiPassword, sizeof(_config.wifiPassword)-1);
- 
-             if (p->name() == "enable_spotify")
-                 _config.spotifyEnabled = true; /* data race shouldn't occur here... hopefully.  */
-         }
- 
-         TS_INFOF("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.wifiSSID, _config.wifiPassword);
- 
-         finished = true;
-         request->send(200, "text/http", "<html><p>Work is just about done!</p></html>");
-     });
+        TS_INFOF("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.wifiSSID, _config.wifiPassword);
+
+        finished = true;
+        request->send(200, "text/http", "<html><p>Work is just about done!</p></html>");
+    });
  
      _server.on("/css/pico.min.css", HTTP_GET, [](AsyncWebServerRequest* request){
          request->send(SPIFFS, "/css/pico.min.css", "text/css");
@@ -246,11 +253,11 @@ startFirstTimeSetup:
  
     _server.begin();
  
-     while (!finished) { }
+     while (!finished) { dnsServer.processNextRequest(); }
  
      WiFi.softAPdisconnect(true);
 
-    _dnsServer.stop();
+    dnsServer.stop();
     _server.reset();
 
     /* Attempt to connect to the persons wifi. */
@@ -291,17 +298,14 @@ displayError:
 
 bool App::preformSpotifyAuthorization()
 {
-
-    TS_INFO("Beginning Spotify authentication process.\n");
+    log_d("Beginning Spotify authentication process");
 
     /* Add spotify callbacks for the authentication process. */
-    std::atomic<bool> finished = false;
+    std::atomic<bool> finished(false);
 
     /* Start MDNS for to use talos.local for Spotify config. */
-    TS_INFO("Beginning MDNS.\n");
+    log_d("Beginning MDNS");
     MDNS.begin("talos");
-
-    TS_INFOF("Beginning Web Server. %d\n", ESP.getFreeHeap());
 
     _server.on("/spotify", HTTP_GET, [](AsyncWebServerRequest* request){
         
@@ -327,17 +331,13 @@ bool App::preformSpotifyAuthorization()
         char spotifyCodeChallenge[44] = "";
         strncpy(spotifyCodeChallenge, codeVerifierShaBase64.c_str(), 43);
 
-  
-
-        /* Redirect Spotify's API to the spotify_callback to receive the code. */
-  
-        /* Build the Spotify redirect for authorization. */
+        /* Build the Spotify authentication URL and redirect the user there. */
         String url;
         url.reserve(500);
         url.concat(
             F("https://accounts.spotify.com/authorize/?"
             "response_type=code"
-            "&client_id=" TS_SECRET_SPOTIFY_CLIENT_ID
+            "&client_id=" TS_SPOTIFY_CLIENT_ID
             "&scope="
                 "user-read-private+"
                 "user-read-currently-playing+"
@@ -346,11 +346,8 @@ bool App::preformSpotifyAuthorization()
             "&code_challenge_method=S256"
             "&code_challenge="));
         url.concat(spotifyCodeChallenge);
-        
-        // url.concat(redirect);
 
-
-        TS_INFOF("Spotify redirect URL generated as: %s", url.c_str());
+        log_i("Spotify authorization redirect generated: %s", url.c_str());
 
         request->redirect(url);
     });
@@ -384,6 +381,7 @@ bool App::preformSpotifyAuthorization()
     _server.end();
     MDNS.end();
 
+    return true;
 }
 
 void App::displayGeneral(Strings::Select severity, Strings::Select primary, Strings::Select secondary)

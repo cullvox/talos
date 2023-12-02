@@ -1,7 +1,8 @@
 #pragma once
 
-#include <atomic>
 #include <AsyncWebSocket.h>
+
+#define TS_SPOTIFY_CLIENT_ID "bb15029eaeea4bd086008584ae1fbaf7"
 
 namespace ts {
 

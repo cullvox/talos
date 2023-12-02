@@ -33,6 +33,11 @@ struct Extent2i {
     uint16_t width;
     uint16_t height;
 
+    constexpr Extent2i(uint16_t width, uint16_t height)
+        : width(width)
+        , height(height) 
+    {}
+
     Extent2i() = default;
     ~Extent2i() = default;
 

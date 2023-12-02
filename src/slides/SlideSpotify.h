@@ -6,7 +6,7 @@ namespace ts {
 
 class SlideSpotify : public Slide {
 public:
-    virtual std::string_view name() { return "SpotifySlide"; }
+    virtual const char* name() { return "SpotifySlide"; }
     virtual bool fetch(Render& render) override;
     // virtual void overlay(Render& render) override;
     virtual void render(Render& render) override;

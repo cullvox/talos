@@ -77,10 +77,10 @@ public:
     virtual uint8_t* data() override { return _data; }
     
 private:
-    static inline constexpr Extent2i _extent = { width, height };
-    static inline constexpr uint32_t _widthBytes = ((width % 8 == 0) ? (width / 8) : (width / 8 + 1));
-    static inline constexpr uint32_t _heightBytes = height;
-    static inline constexpr uint32_t _sizeBytes = _widthBytes * _heightBytes;
+    static constexpr Extent2i _extent = { width, height };
+    static const uint32_t _widthBytes = ((width % 8 == 0) ? (width / 8) : (width / 8 + 1));
+    static const uint32_t _heightBytes = height;
+    static const uint32_t _sizeBytes = _widthBytes * _heightBytes;
     uint8_t _data[_sizeBytes];
 };
 

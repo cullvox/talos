@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 
+#include "Print.h"
 #include "Bitmap.h"
 
 namespace ts {
@@ -99,6 +100,8 @@ BitmapAlloc::BitmapAlloc(Extent2i extent, bool usePsRam)
 {
     assert(extent.width <= 1024 && "Bitmap width must be less than 1024!");
     assert(extent.height <= 1024 && "Bitmap height must be less than 1024!");
+
+    log_d("Allocating bitmap of width %d, height %d.", extent.width, extent.height);
     
     if (usePsRam && !psramFound())
     {

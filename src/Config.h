@@ -2,6 +2,6 @@
 
 namespace ts {
 
-static inline const char* hostname = "talos";
+static const char* hostname = "talos";
 
 } /* namespace ts */

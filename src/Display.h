@@ -11,13 +11,10 @@ namespace ts {
 
 class Display {
 public:
-    static inline const uint16_t width = 800;
-    static inline const uint16_t height = 480;
-    static inline const Extent2i extent = { width, height };
-
     Display();
     ~Display() = default;
     
+    Extent2i extent();
     bool begin(uint16_t csPin, uint16_t rstPint, uint16_t dcPin, uint16_t busyPin, uint16_t pwrPin, SPIClass& spi = SPI);
     void end();
     void present(const uint8_t* buffer);
@@ -36,6 +33,8 @@ private:
 	void setLut(unsigned char *lut);
     void setLutByHost(unsigned char *lut_vcom, unsigned char *lut_ww, unsigned char *lut_bw, unsigned char *lut_wb, unsigned char *lut_bb);
 
+    uint16_t    width = 800;
+    uint16_t    height = 480;
     uint16_t    _csPin;
     uint16_t    _rstPin;
     uint16_t    _dcPin;

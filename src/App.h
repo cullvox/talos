@@ -2,7 +2,6 @@
 
 #include <Preferences.h>
 #include <AsyncWebSocket.h>
-#include <ESPAsync_WiFiManager.hpp>
 
 #include "Bitmap.h"
 #include "Render.h"
@@ -28,18 +27,19 @@ private:
     static void generateSpotifyCodeVerifier(char* codeVerifier, uint32_t codeLength);
 
     Preferences _prefs;
+    Display _display;
     BitmapAlloc _buffer;
     Render _render;
-    Display _display;
     SlideGeneral _slideGeneral;
     AsyncWebServer _server;
-    AsyncDNSServer _dnsServer;
-    // ESPAsync_WiFiManager _wifiManager;
     Spotify _spotify;
 
     struct Config {
         bool isFirstTimeSetup;
+        bool isWifiEnterprise;
         char wifiSSID[64+1];
+        char wifiUsername[64+1];
+        char wifiIdentity[64+1];
         char wifiPassword[32+1];
         bool spotifyEnabled;
         bool spotifyAuthorized;

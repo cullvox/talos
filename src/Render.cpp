@@ -162,6 +162,12 @@ bool Render::loadFont(const unsigned char *data, size_t size)
     return !_ofr.loadFont(data, size);
 }
 
+bool Render::loadFont(const char* path)
+{
+    _ofr.unloadFont();
+    return !_ofr.loadFont(path);
+}
+
 void Render::unloadFont()
 {
     _ofr.unloadFont();

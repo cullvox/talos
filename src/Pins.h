@@ -1,24 +1,13 @@
 #pragma once
 
-#include <SPI.h>
-
-namespace ts {
-namespace Pin {
-
 /* General SPI Pins */
-static inline const uint16_t SpiClk = 5;
-static inline const uint16_t SpiCipo = 19;
-static inline const uint16_t SpiCopi = 18;
-
-/* SPI SD Card */
-static inline const uint16_t SdSpiCs = 21;
+#define TS_PIN_SPI_CLK 5
+#define TS_PIN_SPI_CIPO 19
+#define TS_PIN_SPI_COPI 18
 
 /* SPI/Pins ePaper Display */
-static inline const uint16_t PaperSpiCs = 33;
-static inline const uint16_t PaperDc = 15;
-static inline const uint16_t PaperRst = 32;
-static inline const uint16_t PaperBusy = 14;
-static inline const uint16_t PaperPwr = 27;
-
-} /* namespace Pin */
-} /* namespace ts */
+#define TS_PIN_PAPER_SPI_CS 33
+#define TS_PIN_PAPER_DC 15
+#define TS_PIN_PAPER_RST 32
+#define TS_PIN_PAPER_BUSY 14
+#define TS_PIN_PAPER_PWR 27

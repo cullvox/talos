@@ -70,7 +70,8 @@ public:
     Render& drawTextFormat(const char* format, ...);
     Render& drawTextFromFlash(Strings::Select selection);
 
-    bool loadFont(const unsigned char *data, size_t size);
+    bool loadFont(const unsigned char* data, size_t size);
+    bool loadFont(const char* path);
     void unloadFont();
     uint16_t calculateFitFontSize(uint16_t maxWidth, uint16_t maxHeight, const char* str);
     

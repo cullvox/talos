@@ -70,7 +70,14 @@ Display::Display()
     , _busyPin(-1)
     , _pwrPin(-1)
     , _pSpi(nullptr)
+    , width(800)
+    , height(480)
 {
+}
+
+Extent2i Display::extent()
+{
+    return Extent2i{width, height};
 }
 
 bool Display::begin(uint16_t csPin, uint16_t rstPin, uint16_t dcPin, uint16_t busyPin, uint16_t pwrPin, SPIClass& spi)
@@ -234,6 +241,7 @@ void Display::reset(void)
 void Display::present(const uint8_t* buffer) 
 {    
     sendCommand(0x13);
+    Extent2i e = extent();
     for (unsigned long j = 0; j < height; j++) {
         for (unsigned long i = 0; i < width/8; i++) {
             sendData(~buffer[i + j * width/8]);
