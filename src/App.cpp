@@ -78,8 +78,14 @@ bool App::init()
     _prefs.begin("talos");
 
     _config.isFirstTimeSetup = _prefs.getBool("fts", true);
+    _prefs.getBytes("wifissid", _config.wifiSSID, sizeof(_config.wifiSSID)-1);
+    _prefs.getBytes("wifipass", _config.wifiPassword, sizeof(_config.wifiPassword)-1);
     _config.spotifyEnabled = _prefs.getBool("spotenable", false);
     _config.spotifyAuthorized = _prefs.getBool("spotauthed", false);
+
+    log_i("config: fts = %s", _config.isFirstTimeSetup ? "true" : "false");
+    log_i("config: wifissid = %s", _config.wifiSSID);
+    log_i("config: wifipass = %s", _config.wifiPassword);
 
     _prefs.end();
 
@@ -87,10 +93,17 @@ bool App::init()
     if (_config.isFirstTimeSetup)
     {
 
-        if (!preformFirstTimeSetup()) return false;
-        // _prefs.putBool("fts", false);
-    }
 
+        if (!preformFirstTimeSetup()) return false;
+        _prefs.putBool("fts", false);
+    }
+    else
+    {
+        if (!connectToWiFi())
+        {
+            if (!preformFirstTimeSetup()) return false;
+        }
+    }
 
     /* Preform authentication for Spotify. */
     if (_config.spotifyEnabled && !_config.spotifyAuthorized)
@@ -118,19 +131,19 @@ public:
     {
         log_i("Sending first time setup page to browser.");
 
-        if (request->requestedConnType() == HTTP_GET &&
+        if (request->method() == HTTP_GET &&
             request->url() == "/css/pico.min.css") {
             request->send(SPIFFS, "/css/pico.min.css", "text/css");
             return;
-        } else if (request->requestedConnType() == HTTP_GET &&
+        } else if (request->method() == HTTP_GET &&
             request->url() == "/css/font-awesome.min.css") {
             request->send(SPIFFS, "/css/font-awesome.min.css", "text/css");
             return;
-        } else if (request->requestedConnType() == HTTP_GET &&
-            request->url() == "/css/fontawesome-webfont.ttf") {
+        } else if (request->method() == HTTP_GET &&
+            request->url() == "/fonts/fontawesome-webfont.ttf") {
             request->send(SPIFFS, "/css/fontawesome-webfont.ttf", "text/css");
             return;
-        } else if (request->requestedConnType() == HTTP_GET &&
+        } else if (request->method() == HTTP_GET &&
             request->url() == "/") {
             request->send(SPIFFS, "/first_time_setup.html");
             return;
@@ -142,6 +155,11 @@ public:
 
 bool App::connectToWiFi()
 {
+    if (WiFi.isConnected()) {
+        log_w("Already connected to WiFi.");
+       return true;
+    }
+
     if (_config.isWifiEnterprise) {
         log_i("Using Enterprise, SSID: %s, Identitiy: %s, Username %s, Password: %s", _config.wifiSSID, _config.wifiIdentity, _config.wifiUsername, _config.wifiPassword);
         WiFi.begin(_config.wifiSSID, WPA2_AUTH_PEAP, _config.wifiIdentity, _config.wifiUsername, _config.wifiPassword);
@@ -247,8 +265,9 @@ bool App::preformFirstTimeSetup()
  
         TS_INFOF("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.wifiSSID, _config.wifiPassword);
 
-        finished = true;
+        
         request->send(200, "text/http", "<html><p>Work is just about done!</p></html>");
+        finished = true;
     });
  
  
@@ -257,11 +276,17 @@ bool App::preformFirstTimeSetup()
     _server.begin();
  
      while (!finished) { dnsServer.processNextRequest(); }
- 
+
      WiFi.softAPdisconnect(true);
 
     dnsServer.stop();
     _server.reset();
+
+    /* Save the WiFi credentials. */
+    Preferences prefs;
+    prefs.begin("talos");
+    prefs.putBytes("wifissid", _config.wifiSSID, sizeof(_config.wifiSSID)-1);
+    prefs.putBytes("wifipass", _config.wifiPassword, sizeof(_config.wifiPassword)-1);
 
     /* Attempt to connect to the persons wifi. */
     if (!connectToWiFi()) {
@@ -274,27 +299,12 @@ bool App::preformFirstTimeSetup()
     {
         /* WiFi might not be properly configured, we're not connected to the web. */
         log_e("NTP connection failed, WiFi may not be connected to internet.");
-
+        return false;
         // displayGeneral()
     }
 
-    while (true)
-    {
-        sleep(1);
-        log_i("Time: %s", NTP.getTimeDateString());
-    }
-
-
-    /* Establish authorization with spotify. */
-    if (_config.spotifyEnabled)
-    {
-        if (!preformSpotifyAuthorization())
-        {
-            /* Display to the user that first time setup is restarting. */
-            displayGeneral(Strings::eSeverityError, Strings::eErrSpotAuthFailed, Strings::eSolRestartFTS);    
-            return false;
-        }
-    }
+    NTP.getTime(); /* Force the NTP client to request now. */
+    log_i("Time: %s", NTP.getTimeDateString());
 
     /* Display the setup complete slide. */
     
@@ -307,18 +317,23 @@ bool App::preformFirstTimeSetup()
     log_i("=======================================");
     log_i("");
 
+    prefs.putBool("fts", false);
+
+    prefs.end();
+
+
     return true;
 }
 
 bool App::preformSpotifyAuthorization()
 {
-    log_d("Beginning Spotify authentication process");
+    log_i("Beginning Spotify authentication process");
 
     /* Add spotify callbacks for the authentication process. */
     std::atomic<bool> finished(false);
 
     /* Start MDNS for to use talos.local for Spotify config. */
-    log_d("Beginning MDNS");
+    log_i("Beginning MDNS");
     MDNS.begin("talos");
 
     _spotify.addAuthCallbacks(_server); 

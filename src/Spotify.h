@@ -23,8 +23,6 @@ public:;
     void waitForAuthorization();
     
 private:
-    void sendRequest();
-    void requestRefreshToken();
     void onRequestSpotifyAuthentication(AsyncWebServerRequest*);
     void onRequestSpotifyCallback(AsyncWebServerRequest*);
 

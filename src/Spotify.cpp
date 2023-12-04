@@ -37,32 +37,32 @@ void Spotify::onRequestSpotifyAuthentication(AsyncWebServerRequest* request)
         verifier[i] = random(256);
     
     /* Encode the verifier to base64. */
-    String encoded = base64::encode((const uint8_t*)verifier, 32);
-    encoded.replace('+', '-');
-    encoded.replace('/', '_');
+    String encodedVerifier = base64::encode((const uint8_t*)verifier, 32);
+    encodedVerifier.replace('+', '-');
+    encodedVerifier.replace('/', '_');
 
-    strncpy(_codeVerifier, encoded.c_str(), 43);
+    strncpy(_codeVerifier, encodedVerifier.c_str(), 43);
 
     unsigned char codeVerifierSha[32];
     mbedtls_sha256_context ctx;
     mbedtls_sha256_init(&ctx);
     mbedtls_sha256_starts(&ctx, false);
-    mbedtls_sha256_update(&ctx, (const unsigned char*)_codeVerifier, 32);
+    mbedtls_sha256_update(&ctx, (const unsigned char*)_codeVerifier, 43);
     mbedtls_sha256_finish(&ctx, verifier);
     mbedtls_sha256_free(&ctx);
 
-    String codeVerifierShaBase64 = base64::encode((uint8_t*)codeVerifierSha, sizeof(codeVerifierSha));
-    codeVerifierShaBase64.replace('+', '-');
-    codeVerifierShaBase64.replace('/', '_');
+    String encoded = base64::encode((uint8_t*)codeVerifierSha, sizeof(codeVerifierSha));
+    encoded.replace('+', '-');
+    encoded.replace('/', '_');
 
     char spotifyCodeChallenge[44] = "";
-    strncpy(spotifyCodeChallenge, codeVerifierShaBase64.c_str(), 43);
+    strncpy(spotifyCodeChallenge, encoded.c_str(), 43);
 
     log_i("Generated the Spotify code verification:\n\t");
     log_i("\tVerifier %.32s", verifier);
-    log_i("\tVerifier (base64) %s", encoded.c_str());
+    log_i("\tVerifier (base64) %s", encodedVerifier.c_str());
     log_i("\tVerifier SHA256 %.32s", codeVerifierSha);
-    log_i("\tCode Challenge %.32s", spotifyCodeChallenge);
+    log_i("\tCode Challenge %s", encoded.c_str());
 
     /* Build the Spotify authentication URL and redirect the user there. */
     String url;
@@ -75,10 +75,10 @@ void Spotify::onRequestSpotifyAuthentication(AsyncWebServerRequest* request)
             "user-read-private+"
             "user-read-currently-playing+"
             "user-read-playback-state"
-        "&redirect_uri=http%3A%2F%2Ftalos.local/spotify_callback"
+        "&redirect_uri=http%3A%2F%2Ftalos.local%2Fspotify_callback"
         "&code_challenge_method=S256"
         "&code_challenge="));
-    url.concat(spotifyCodeChallenge);
+    url.concat(encoded);
 
     log_i("Spotify authorization redirect generated: %s", url.c_str());
 
