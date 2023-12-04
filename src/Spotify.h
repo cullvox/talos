@@ -14,18 +14,24 @@ struct SpotifyPlayerStatus
 };
 
 class Spotify {
-public:
-    bool blockingRequestUserAuthorization();
+public:;
+    bool isRefreshRequired();
+    bool blockingUpdateRefreshToken();
     bool blockingRequestPlaybackState(SpotifyPlayerStatus& status);
-    void addServerCallbacks(AsyncWebServer& server);
+    void addAuthCallbacks(AsyncWebServer& server);
     String generateAuthLink();
+    void waitForAuthorization();
     
 private:
     void sendRequest();
     void requestRefreshToken();
+    void onRequestSpotifyAuthentication(AsyncWebServerRequest*);
+    void onRequestSpotifyCallback(AsyncWebServerRequest*);
 
-    String _authCode;
-    char _refreshToken[150];
+    bool _refreshRequired;
+    uint64_t _refreshTime;
+    char _codeVerifier[44] = "";
+    char _refreshToken[150] = "";
 };
 
 

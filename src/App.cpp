@@ -9,6 +9,7 @@
 #include <SPIFFS.h>
 #include <mbedtls/sha256.h>
 #include <base64.h>
+#include <ESPNtpClient.h>
 
 #include <esp_ota_ops.h>
 
@@ -90,6 +91,7 @@ bool App::init()
         // _prefs.putBool("fts", false);
     }
 
+
     /* Preform authentication for Spotify. */
     if (_config.spotifyEnabled && !_config.spotifyAuthorized)
     {
@@ -114,9 +116,27 @@ public:
     }
     void handleRequest(AsyncWebServerRequest *request)
     {
-        TS_INFO("Sending first time setup page to browser.\n");
+        log_i("Sending first time setup page to browser.");
+
+        if (request->requestedConnType() == HTTP_GET &&
+            request->url() == "/css/pico.min.css") {
+            request->send(SPIFFS, "/css/pico.min.css", "text/css");
+            return;
+        } else if (request->requestedConnType() == HTTP_GET &&
+            request->url() == "/css/font-awesome.min.css") {
+            request->send(SPIFFS, "/css/font-awesome.min.css", "text/css");
+            return;
+        } else if (request->requestedConnType() == HTTP_GET &&
+            request->url() == "/css/fontawesome-webfont.ttf") {
+            request->send(SPIFFS, "/css/fontawesome-webfont.ttf", "text/css");
+            return;
+        } else if (request->requestedConnType() == HTTP_GET &&
+            request->url() == "/") {
+            request->send(SPIFFS, "/first_time_setup.html");
+            return;
+        }
+
         request->send(SPIFFS, "/first_time_setup.html", "text/html");
-        // request->send_P(200, "text/html", responseHTML); 
     }
 };
 
@@ -173,15 +193,11 @@ Err_ConnectFailed:
 bool App::preformFirstTimeSetup()
 {
 
-startFirstTimeSetup:
-    TS_INFO("\n");
-    TS_INFO("=======================================\n");
-    TS_INFO("BEGIN: First Time Setup\n");
-    TS_INFO("=======================================\n");
-    TS_INFO("\n");
-
-    /* Display to the user that FTS is about to happen. */
-    displayGeneral(Strings::eSeverityInfo, Strings::eSetupBeginning, Strings::eSetupJoinWifi);
+    log_i("\n");
+    log_i("=======================================\n");
+    log_i("BEGIN: First Time Setup\n");
+    log_i("=======================================\n");
+    log_i("\n");
 
     /* Start the access point. */
     String pass = "ABC1234567";
@@ -196,9 +212,7 @@ startFirstTimeSetup:
 
 
     /* TODO: Display the actual SSID in displayGeneral some how. */
-    
-  
-
+    displayGeneral(Strings::eSeverityInfo, Strings::eSetupBeginning, Strings::eSetupJoinWifi);
     
     /* Setup the server callbacks and begin. */
     std::atomic<bool> finished(false);
@@ -237,17 +251,6 @@ startFirstTimeSetup:
         request->send(200, "text/http", "<html><p>Work is just about done!</p></html>");
     });
  
-     _server.on("/css/pico.min.css", HTTP_GET, [](AsyncWebServerRequest* request){
-         request->send(SPIFFS, "/css/pico.min.css", "text/css");
-     });
-     
-     _server.on("/css/font-awesome.min.css", HTTP_GET, [](AsyncWebServerRequest* request){
-         request->send(SPIFFS, "/css/font-awesome.min.css", "text/css");
-     });
- 
-     _server.on("/fonts/fontawesome-webfont.ttf", HTTP_GET, [](AsyncWebServerRequest* request){
-         request->send(SPIFFS, "/fonts/fontawesome-webfont.ttf");
-     });
  
      _server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
  
@@ -263,8 +266,24 @@ startFirstTimeSetup:
     /* Attempt to connect to the persons wifi. */
     if (!connectToWiFi()) {
         TS_INFO("Could not connect to WiFi during first time setup, configuring again.\n");
-        goto startFirstTimeSetup; /* connectToWiFi will display an error. */
+        return false; /* connectToWiFi will display an error. */
     }
+
+    /* WiFi is guaranteed connected, connect the NTP client. */
+    if (!NTP.begin(nullptr, false))
+    {
+        /* WiFi might not be properly configured, we're not connected to the web. */
+        log_e("NTP connection failed, WiFi may not be connected to internet.");
+
+        // displayGeneral()
+    }
+
+    while (true)
+    {
+        sleep(1);
+        log_i("Time: %s", NTP.getTimeDateString());
+    }
+
 
     /* Establish authorization with spotify. */
     if (_config.spotifyEnabled)
@@ -273,27 +292,22 @@ startFirstTimeSetup:
         {
             /* Display to the user that first time setup is restarting. */
             displayGeneral(Strings::eSeverityError, Strings::eErrSpotAuthFailed, Strings::eSolRestartFTS);    
-            goto startFirstTimeSetup;
+            return false;
         }
     }
 
     /* Display the setup complete slide. */
     
 
-    TS_INFO("Setup complete!\n");
+    log_i("Setup complete!");
 
-    TS_INFO("\n");
-    TS_INFO("=======================================\n");
-    TS_INFO("END: First Time Setup\n");
-    TS_INFO("=======================================\n");
-    TS_INFO("\n");
+    log_i("");
+    log_i("=======================================");
+    log_i("END: First Time Setup");
+    log_i("=======================================");
+    log_i("");
 
     return true;
-
-displayError:
-
-    goto startFirstTimeSetup;    
-
 }
 
 bool App::preformSpotifyAuthorization()
@@ -307,75 +321,13 @@ bool App::preformSpotifyAuthorization()
     log_d("Beginning MDNS");
     MDNS.begin("talos");
 
-    _server.on("/spotify", HTTP_GET, [](AsyncWebServerRequest* request){
-        
-        /* Generate a random state value. */
-        const int codeVerifierLength = 64;
-        char codeVerifier[codeVerifierLength+1];
-        
-        generateSpotifyCodeVerifier(codeVerifier, codeVerifierLength);
-
-        char codeVerifierSha[32];
-
-        mbedtls_sha256_context ctx;
-        mbedtls_sha256_init(&ctx);
-        mbedtls_sha256_starts(&ctx, false);
-        mbedtls_sha256_update(&ctx, (unsigned char*)codeVerifier, codeVerifierLength);
-        mbedtls_sha256_finish(&ctx, (unsigned char*)codeVerifierSha);
-        mbedtls_sha256_free(&ctx);
-
-        String codeVerifierShaBase64 = base64::encode((uint8_t*)codeVerifierSha, sizeof(codeVerifierSha));
-        codeVerifierShaBase64.replace('+', '-');
-        codeVerifierShaBase64.replace('/', '_');
-
-        char spotifyCodeChallenge[44] = "";
-        strncpy(spotifyCodeChallenge, codeVerifierShaBase64.c_str(), 43);
-
-        /* Build the Spotify authentication URL and redirect the user there. */
-        String url;
-        url.reserve(500);
-        url.concat(
-            F("https://accounts.spotify.com/authorize/?"
-            "response_type=code"
-            "&client_id=" TS_SPOTIFY_CLIENT_ID
-            "&scope="
-                "user-read-private+"
-                "user-read-currently-playing+"
-                "user-read-playback-state"
-            "&redirect_uri=http%3A%2F%2Ftalos.local/spotify_callback"
-            "&code_challenge_method=S256"
-            "&code_challenge="));
-        url.concat(spotifyCodeChallenge);
-
-        log_i("Spotify authorization redirect generated: %s", url.c_str());
-
-        request->redirect(url);
-    });
-
-    _server.on("/spotify_callback", HTTP_GET, [&finished](AsyncWebServerRequest* request){
-
-        TS_INFO("Received callback from Spotify\n");
-
-        /* Retrieve the spotify access code. */
-        AsyncWebParameter* code = request->getParam("code");
-        if (!code)
-        {
-            TS_ERROR("Could not find Spotify access code in callback!");
-            return;
-        }
-        
-        String spotifyCode = code->value();
-        TS_INFOF("Received authorization code from Spotify: %s\n", spotifyCode.c_str());
-
-        finished = true;
-    });
-
-    _server.on("/", [](AsyncWebServerRequest* req){
-        return;
-    });
+    _spotify.addAuthCallbacks(_server); 
 
     /* Wait until authentication is complete. */
     while (!finished) { }
+
+    if (_spotify.isRefreshRequired())
+        _spotify.blockingUpdateRefreshToken();
 
     /* Cleanup server stuffs. */
     _server.end();
@@ -392,17 +344,6 @@ void App::displayGeneral(Strings::Select severity, Strings::Select primary, Stri
     _buffer.clear();
     _slideGeneral.render(_render);
     _display.present(_buffer.data());
-}
-
-void App::generateSpotifyCodeVerifier(char* codeVerifier, uint32_t codeLength)
-{
-    const char* possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-    for (int i = 0; i < codeLength; i++)
-    {
-        uint32_t index = esp_random() % (sizeof(possible)-1);
-        codeVerifier[i] = possible[i];
-    }
 }
 
 } /* namespace ts */
