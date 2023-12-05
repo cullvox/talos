@@ -62,11 +62,20 @@ bool App::init()
     /* Initialize the display and graphics operations. */
     _render.setBitmap(_buffer);
     ffsupport_setffs(SPIFFS);
-    if (!_render.loadFont("/fonts/Neuton-Regular.ttf"))
+
+    
+    if (!_render.loadFont("/fonts/faxnrxwi.ttf"))
     {
-        TS_ERROR("Could not load default font!\n");
+        log_e("Could not load the icons font!");
         return false;
     }
+
+    // if (!_render.loadFont("/fonts/Neuton-Regular.ttf", 1))
+    // {
+    //     log_e("Could not load default font!\n");
+    //     return false;
+    // }
+
 
     SPI.begin(TS_PIN_SPI_CLK, TS_PIN_SPI_CIPO, TS_PIN_SPI_COPI, TS_PIN_PAPER_SPI_CS);
     if (!_display.begin(TS_PIN_PAPER_SPI_CS, TS_PIN_PAPER_RST, TS_PIN_PAPER_DC, TS_PIN_PAPER_BUSY, TS_PIN_PAPER_PWR)) 
@@ -168,9 +177,9 @@ bool App::connectToWiFi()
     WiFi.begin(_config.wifiSSID, _config.wifiPassword);
 
     bool connected = false;
-    const time_t timeStarted = time(nullptr);
+    time_t timeStarted = time(nullptr);
 
-    while (WiFi.status() != WL_CONNECTED) {
+    while (!connected) {
 
         /* Stop attempting to connect after time runs out. */
         const time_t timeSinceStarted = time(nullptr) - timeStarted;
@@ -193,7 +202,7 @@ bool App::connectToWiFi()
             /* Continue until something interesting happens. */ 
             continue; 
         case WL_NO_SSID_AVAIL: 
-            log_e("Wifi SSID: %s was not found.");
+            log_e("Wifi SSID: %s was not found.", _config.wifiSSID);
             goto Err_ConnectFailed;
         case WL_CONNECTED:
             connected = true;
@@ -227,7 +236,20 @@ bool App::connectToWiFi()
         // displayGeneral()
     }
 
+    timeStarted = time(nullptr);
     while (NTP.getFirstSync() == 0) {
+        /* Stop attempting to connect after time runs out. */
+        const time_t timeSinceStarted = time(nullptr) - timeStarted;
+        log_i("NTP client connection time remaining: %ds", TS_MAX_NTP_CONNECTION_TIMEOUT - timeSinceStarted);
+
+        if (timeSinceStarted > TS_MAX_NTP_CONNECTION_TIMEOUT)
+        {
+            log_e("Timeout, could not connect to an NTP server in " TS_STRINGIFY(TS_MAX_WIFI_CONNECTION_TIMEOUT) " seconds.");
+            /* Timeout error has occurred. */
+
+            goto Err_ConnectFailed;
+        }
+
         delay(500);
         log_i("Waiting for an NTP connection.");
     }
@@ -252,7 +274,6 @@ Err_ConnectFailed:
 */
 bool App::preformFirstTimeSetup()
 {
-
     log_printf("\n");
     log_printf("=======================================\n");
     log_printf("BEGIN: First Time Setup\n");
@@ -269,7 +290,6 @@ bool App::preformFirstTimeSetup()
     /* Start the DNS server to catch all for the captive portal. */
     DNSServer dnsServer;
     dnsServer.start(53, "*", WiFi.softAPIP());
-
 
     /* TODO: Display the actual SSID in displayGeneral some how. */
     displayGeneral(Strings::eSeverityInfo, Strings::eSetupBeginning, Strings::eSetupJoinWifi);

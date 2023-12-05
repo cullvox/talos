@@ -31,7 +31,7 @@ TS_PROGMEM_STR(Loading3, "Finding Nirmata..."); /* The Creator */
 TS_PROGMEM_STR(Loading4, "Making Computer Sauces...");
 
 TS_PROGMEM_STR(SeverityError, "ERROR");
-TS_PROGMEM_STR(SeverityInfo, "INFO");
+TS_PROGMEM_STR(SeverityInfo, "INFO \uf259");
 
 /* Primary */
 TS_PROGMEM_STR(ErrWifiConFailed, "WiFi Connection Failed");

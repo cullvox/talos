@@ -16,22 +16,25 @@
   <main class="container">
 
     <hgroup>
-      <h2><i class="fa fa-gear fa-fw" aria-hidden="true"></i> Let's get you setup. </h2>
+      <h2><i class="fa fa-wrench fa-fw" aria-hidden="true"></i> Let's get you setup. </h2>
       <p>Here's TALOS, your personal status device.</p>
     </hgroup>
 
-    <form action="/done" method="get" id="setup_form">
+    <form action="/done" method="get" id="setup_form" onsubmit="redirectToComplete()">
       <div class="grid">
 
         <article>
           <h3> <i class="fa fa-wifi fa-fw"></i> Enter your WiFi information</h3>
           
-          <input type="text" id="wifi_ssid" name="wifi_ssid" placeholder="WiFi SSID" required/>
+          <input type="text" id="wifi_ssid" name="wifi_ssid" placeholder="&#xf25b; WiFi SSID" style="font-family:Arial, FontAwesome" required/>
           <label for="wifi_password">
-            <input type="password" id="wifi_password" name="wifi_password" placeholder="WiFi Password" required />
-            <input type="checkbox" id="wifi_password_show" onchange="togglePassword()" />
-            Show Password
+            
+            <input type="password" id="wifi_password" name="wifi_password" placeholder="&#xf023; Password" style="font-family:Arial, FontAwesome" required />
           </label>
+          <input type="checkbox" id="wifi_password_show" onchange="togglePassword()" />
+          <label for="wifi_password_show">Show Password</label>
+          
+        
 
         </article>
 
@@ -62,21 +65,17 @@
 </html>
 
 <script>
-  const checkEnterprise = document.getElementById("wifi_enterprise_checkbox");
   const checkPassword = document.getElementById("wifi_password_show");
   const inputPassword = document.getElementById("wifi_password");
-  const inputEnterpriseIdentity = document.getElementById("wifi_enterprise_identity");
-  const inputEnterpriseUsername = document.getElementById("wifi_enterprise_username");
 
   function togglePassword()
   {
     inputPassword.setAttribute("type", checkPassword.checked ? "text" : "password");
   }
 
-  function toggleEnterprise()
+  function redirectToComplete()
   {
-    inputEnterpriseIdentity.disabled = !checkEnterprise.checked;
-    inputEnterpriseUsername.disabled = !checkEnterprise.checked;
+    location = document.baseURI + "/setup_complete.html";
   }
 
 </script>
