@@ -2,6 +2,7 @@
 #include <mbedtls/sha256.h>
 #include <base64.h>
 #include <ESPNtpClient.h>
+#include <SPIFFS.h>
 
 #include "Config.h"
 #include "Spotify.h"
@@ -100,6 +101,7 @@ void Spotify::onRequestSpotifyCallback(AsyncWebServerRequest* request)
     String spotifyCode = code->value();
     log_i("Received authorization code from Spotify: %s\n", spotifyCode.c_str());
 
+    // request->send(SPIFFS, "text/html", "");
 }
 
 } /* namespace ts */

@@ -14,7 +14,7 @@ struct SpotifyPlayerStatus
 };
 
 class Spotify {
-public:;
+public:
     bool isRefreshRequired();
     bool blockingUpdateRefreshToken();
     bool blockingRequestPlaybackState(SpotifyPlayerStatus& status);

@@ -41,15 +41,15 @@ bool App::init()
     /* Print out a nice little logo. */
     const esp_app_desc_t* app = esp_ota_get_app_description();
 
-    printf("\n");
-    printf("ooooooooooooo       .o.       ooooo          .oooooo.    .oooooooo " "\tCommit %s\n", TALOS_VERSION_GIT_HASH_SHORT);
-    printf("8'   888   `8      .888.      `888'         d8P'  `Y8b  d8P'    `Y8" "\tTag %s\n", TALOS_VERSION_GIT_TAG);
-    printf("     888          .8 888.      888         888      888 Y88bo.     " "\tVersion %s\n", TALOS_VERSION_STRING);
-    printf("     888         .8  `888.     888         888      888  ` Y8888o. " "\tDate %s\n", app->date);
-    printf("     888        .88ooo8888.    888         888      888      ` Y88b" "\tIDF Version %s\n", app->idf_ver);
-    printf("     888       .8'     `888.   888       o `88b    d88' oo     .d8P" "\tArduino %d.%d.%d\n", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
-    printf("    o888o     o88o     o8888o o888ooooood8  `Y8bood8P'  88888888P' " "\tby Caden Miller (https://cadenmiller.dev)\n");
-    printf("\n");
+    log_printf("");
+    log_printf("ooooooooooooo       .o.       ooooo          .oooooo.    .oooooooo " "\tCommit %s\n", TALOS_VERSION_GIT_HASH_SHORT);
+    log_printf("8'   888   `8      .888.      `888'         d8P'  `Y8b  d8P'    `Y8" "\tTag %s\n", TALOS_VERSION_GIT_TAG);
+    log_printf("     888          .8 888.      888         888      888 Y88bo.     " "\tVersion %s\n", TALOS_VERSION_STRING);
+    log_printf("     888         .8  `888.     888         888      888  ` Y8888o. " "\tDate %s\n", app->date);
+    log_printf("     888        .88ooo8888.    888         888      888      ` Y88b" "\tIDF Version %s\n", app->idf_ver);
+    log_printf("     888       .8'     `888.   888       o `88b    d88' oo     .d8P" "\tArduino %d.%d.%d\n", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
+    log_printf("    o888o     o88o     o8888o o888ooooood8  `Y8bood8P'  88888888P' " "\tby Caden Miller (https://cadenmiller.dev)\n");
+    log_printf("");
 
     if (!SPIFFS.begin(true))
     {
@@ -86,24 +86,23 @@ bool App::init()
     log_i("config: fts = %s", _config.isFirstTimeSetup ? "true" : "false");
     log_i("config: wifissid = %s", _config.wifiSSID);
     log_i("config: wifipass = %s", _config.wifiPassword);
+    log_i("config: spotenable = %s", _config.spotifyEnabled ? "true" : "false");
+    log_i("config: spotauthed = %s", _config.spotifyAuthorized ? "true" : "false");
 
     _prefs.end();
 
     /* Preform the first time setup. */
     if (_config.isFirstTimeSetup)
     {
-
-
         if (!preformFirstTimeSetup()) return false;
         _prefs.putBool("fts", false);
     }
-    else
+
+    if (!connectToWiFi())
     {
-        if (!connectToWiFi())
-        {
-            if (!preformFirstTimeSetup()) return false;
-        }
+        preformFirstTimeSetup();
     }
+
 
     /* Preform authentication for Spotify. */
     if (_config.spotifyEnabled && !_config.spotifyAuthorized)
@@ -141,7 +140,7 @@ public:
             return;
         } else if (request->method() == HTTP_GET &&
             request->url() == "/fonts/fontawesome-webfont.ttf") {
-            request->send(SPIFFS, "/css/fontawesome-webfont.ttf", "text/css");
+            request->send(SPIFFS, "/fonts/fontawesome-webfont.ttf", "text/css");
             return;
         } else if (request->method() == HTTP_GET &&
             request->url() == "/") {
@@ -155,43 +154,86 @@ public:
 
 bool App::connectToWiFi()
 {
-    if (WiFi.isConnected()) {
-        log_w("Already connected to WiFi.");
-       return true;
-    }
+    log_i("Initiating connection to WiFi: SSID: %s", _config.wifiSSID);
 
-    if (_config.isWifiEnterprise) {
-        log_i("Using Enterprise, SSID: %s, Identitiy: %s, Username %s, Password: %s", _config.wifiSSID, _config.wifiIdentity, _config.wifiUsername, _config.wifiPassword);
-        WiFi.begin(_config.wifiSSID, WPA2_AUTH_PEAP, _config.wifiIdentity, _config.wifiUsername, _config.wifiPassword);
-    } else {
-        WiFi.begin(_config.wifiSSID, _config.wifiPassword);
-    }
+    /* Clear any previous WiFi settings. */
+    WiFi.disconnect();
+    WiFi.mode(WIFI_STA);
 
-    TS_INFO("Connecting to WiFi\n");
+    /* Disable automatic reconnect so we can display an 
+        error message to the user properly. */
+    WiFi.setAutoReconnect(false); 
+    
+    /* Begin the WiFi! */
+    WiFi.begin(_config.wifiSSID, _config.wifiPassword);
+
     bool connected = false;
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        printf(".\n");
+    const time_t timeStarted = time(nullptr);
 
-        switch(WiFi.status())
-        {
+    while (WiFi.status() != WL_CONNECTED) {
+
+        /* Stop attempting to connect after time runs out. */
+        const time_t timeSinceStarted = time(nullptr) - timeStarted;
+        log_i("Connection time remaining: %ds", TS_MAX_WIFI_CONNECTION_TIMEOUT - timeSinceStarted);
+
+        if (timeSinceStarted > TS_MAX_WIFI_CONNECTION_TIMEOUT) {
+            log_e("Timeout, could not connect to WiFi in " TS_STRINGIFY(TS_MAX_WIFI_CONNECTION_TIMEOUT) " seconds.");
+            
+            /* Timeout error has occurred. */
+
+            goto Err_ConnectFailed;
+        }
+
+        delay(500);
+
+        switch(WiFi.status()) {
+        case WL_DISCONNECTED:
+            log_e("WiFi Disconnected.");
+        case WL_IDLE_STATUS:
+            /* Continue until something interesting happens. */ 
+            continue; 
+        case WL_NO_SSID_AVAIL: 
+            log_e("Wifi SSID: %s was not found.");
+            goto Err_ConnectFailed;
         case WL_CONNECTED:
             connected = true;
-        case WL_IDLE_STATUS:
-            continue;
-        case WL_CONNECT_FAILED: 
-            TS_INFO("WiFi Connection failed!\n");
-            //slideError.setPrimary(ts::Strings::eErr_Wifi_ConFailed);
+            break;
+        case WL_CONNECT_FAILED:  
+            log_e("WiFi connection failed.");
             goto Err_ConnectFailed;
-        case WL_NO_SSID_AVAIL: 
-            TS_INFO("No WiFi SSID: %s Found\n");
-            // slideError.setPrimary(ts::Strings::eErr_Wifi_SsidNotFound);
+        case WL_CONNECTION_LOST: 
+            log_e("WiFi connection lost.");
             goto Err_ConnectFailed;
-        default: break;
+
+        case WL_SCAN_COMPLETED: /* We aren't scanning right now... */
+        case WL_NO_SHIELD:
+        default:
+            log_i("Unexpected WiFi connection error: %d", WiFi.status());
         }
+
     }
 
-    TS_INFOF("Connected to WiFi network with IP Address: %s\n", WiFi.localIP().toString());
+    log_i("Connected to WiFi network with IP Address: %s", WiFi.localIP().toString());
+
+
+    /* WiFi is guaranteed connected, connect the NTP client to a server. */
+    log_i("Connecting to NTP time server: %s", DEFAULT_NTP_SERVER);
+
+    if (!NTP.begin(DEFAULT_NTP_SERVER, false))
+    {
+        /* WiFi might not be properly configured, we're not connected to the web. */
+        log_e("NTP connection failed, WiFi may not be connected to internet.");
+        return false;
+        // displayGeneral()
+    }
+
+    while (NTP.getFirstSync() == 0) {
+        delay(500);
+        log_i("Waiting for an NTP connection.");
+    }
+
+    log_i("Current network time: %s", NTP.getTimeDateString());
+
     return true;
 
 Err_ConnectFailed:
@@ -211,11 +253,11 @@ Err_ConnectFailed:
 bool App::preformFirstTimeSetup()
 {
 
-    log_i("\n");
-    log_i("=======================================\n");
-    log_i("BEGIN: First Time Setup\n");
-    log_i("=======================================\n");
-    log_i("\n");
+    log_printf("\n");
+    log_printf("=======================================\n");
+    log_printf("BEGIN: First Time Setup\n");
+    log_printf("=======================================\n");
+    log_printf("\n");
 
     /* Start the access point. */
     String pass = "ABC1234567";
@@ -235,29 +277,19 @@ bool App::preformFirstTimeSetup()
     /* Setup the server callbacks and begin. */
     std::atomic<bool> finished(false);
 
-    _server.on("/done", HTTP_POST, [&](AsyncWebServerRequest* request){
+    _server.on("/done", HTTP_GET, [&](AsyncWebServerRequest* request){
         
         /* Retrieve the WiFi SSID, password, username and identity. */
         int params = request->params();
         for (int i = 0; i < params; i++) {
             AsyncWebParameter* p = request->getParam(i);
-            TS_INFOF("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+            TS_INFOF("GET [%s]: %s\n", p->name().c_str(), p->value().c_str());
 
             if (p->name() == "wifi_ssid")
                 p->value().getBytes((unsigned char*)_config.wifiSSID, sizeof(_config.wifiSSID)-1);
             
             if (p->name() == "wifi_password")
                 p->value().getBytes((unsigned char*)_config.wifiPassword, sizeof(_config.wifiPassword)-1);
- 
-            if (p->name() == "wifi_enterprise_username") {
-                _config.isWifiEnterprise = true;
-                p->value().getBytes((unsigned char*)_config.wifiUsername, sizeof(_config.wifiUsername)-1);
-            }
-
-            if (p->name() == "wifi_enterprise_identity") {
-                _config.isWifiEnterprise = true;
-                p->value().getBytes((unsigned char*)_config.wifiIdentity, sizeof(_config.wifiIdentity)-1);
-            }
 
             if (p->name() == "enable_spotify")
                 _config.spotifyEnabled = true; /* data race shouldn't occur here... hopefully.  */
@@ -266,18 +298,18 @@ bool App::preformFirstTimeSetup()
         TS_INFOF("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.wifiSSID, _config.wifiPassword);
 
         
-        request->send(200, "text/http", "<html><p>Work is just about done!</p></html>");
+        
+        request->send(SPIFFS, "text/http", "/setup_complete.html");
         finished = true;
     });
  
  
-     _server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
- 
+    _server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
     _server.begin();
  
-     while (!finished) { dnsServer.processNextRequest(); }
+    while (!finished) { dnsServer.processNextRequest(); }
 
-     WiFi.softAPdisconnect(true);
+    WiFi.softAPdisconnect(true);
 
     dnsServer.stop();
     _server.reset();
@@ -285,29 +317,14 @@ bool App::preformFirstTimeSetup()
     /* Save the WiFi credentials. */
     Preferences prefs;
     prefs.begin("talos");
+    prefs.putBool("fts", false);
     prefs.putBytes("wifissid", _config.wifiSSID, sizeof(_config.wifiSSID)-1);
     prefs.putBytes("wifipass", _config.wifiPassword, sizeof(_config.wifiPassword)-1);
-
-    /* Attempt to connect to the persons wifi. */
-    if (!connectToWiFi()) {
-        TS_INFO("Could not connect to WiFi during first time setup, configuring again.\n");
-        return false; /* connectToWiFi will display an error. */
-    }
-
-    /* WiFi is guaranteed connected, connect the NTP client. */
-    if (!NTP.begin(nullptr, false))
-    {
-        /* WiFi might not be properly configured, we're not connected to the web. */
-        log_e("NTP connection failed, WiFi may not be connected to internet.");
-        return false;
-        // displayGeneral()
-    }
-
-    NTP.getTime(); /* Force the NTP client to request now. */
-    log_i("Time: %s", NTP.getTimeDateString());
-
-    /* Display the setup complete slide. */
     
+    /* Reset spotify authorizations. */
+    prefs.putBool("spotenable", _config.spotifyEnabled);
+    prefs.putBool("spotauthed", false);
+    prefs.end();
 
     log_i("Setup complete!");
 
@@ -317,17 +334,12 @@ bool App::preformFirstTimeSetup()
     log_i("=======================================");
     log_i("");
 
-    prefs.putBool("fts", false);
-
-    prefs.end();
-
-
     return true;
 }
 
 bool App::preformSpotifyAuthorization()
 {
-    log_i("Beginning Spotify authentication process");
+    log_i("Beginning Spotify authentication process.");
 
     /* Add spotify callbacks for the authentication process. */
     std::atomic<bool> finished(false);
@@ -338,7 +350,7 @@ bool App::preformSpotifyAuthorization()
 
     _spotify.addAuthCallbacks(_server); 
 
-    /* Wait until authentication is complete. */
+    /* Wait until the user authenticates the device from the web. */
     while (!finished) { }
 
     if (_spotify.isRefreshRequired())
