@@ -10,6 +10,7 @@
 #include <mbedtls/sha256.h>
 #include <base64.h>
 #include <ESPNtpClient.h>
+#include <SpotifyArduinoCert.h>
 
 
 #include <esp_ota_ops.h>
@@ -26,7 +27,7 @@ namespace ts {
 App::App()
     : _display()
     , _buffer(_display.extent())
-    , _spotify(_client)
+    , _spotify(_wifiClient, _httpClient)
     , _server(80)
 {
     memset(_config.wifiSSID, 0, sizeof(_config.wifiSSID));
@@ -70,6 +71,12 @@ bool App::init()
         log_e("Could not load the icons font!");
         return false;
     }
+
+
+
+    _wifiClient.setCACert(spotify_server_cert);
+    _spotify.setClientId(TS_SPOTIFY_CLIENT_ID);
+
 
     // if (!_render.loadFont("/fonts/Neuton-Regular.ttf", 1))
     // {
@@ -226,9 +233,9 @@ bool App::connectToWiFi()
 
 
     /* WiFi is guaranteed connected, connect the NTP client to a server. */
-    log_i("Connecting to NTP time server: %s", DEFAULT_NTP_SERVER);
+    log_i("Connecting to NTP time server: %s", "time.cloudflare.com");
 
-    if (!NTP.begin(DEFAULT_NTP_SERVER, false))
+    if (!NTP.begin("time.cloudflare.com", false))
     {
         /* WiFi might not be properly configured, we're not connected to the web. */
         log_e("NTP connection failed, WiFi may not be connected to internet.");
@@ -386,15 +393,17 @@ bool App::preformSpotifyAuthorization()
         request->redirect(url);
     });
 
-    _server.on("/spotify_callback", [&](AsyncWebServerRequest* request){
-        String code = "";
-        const char *refreshToken = NULL;
+    String code = "";
+    _server.on("/spotify_callback", [&](AsyncWebServerRequest* request){        
         for (uint8_t i = 0; i < request->args(); i++) {
             if (request->argName(i) == "code") {
                 code = request->arg(i);
-                refreshToken = _spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback", true); /* We're using PKCE. */
+                log_i("Recieved code from spotify: %s", code.c_str());
             }
         }
+
+        const char *refreshToken = NULL;
+        refreshToken = _spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback", true); /* We're using PKCE. */
 
         if (refreshToken != NULL) {
             request->send(200, "text/plain", refreshToken);
@@ -403,6 +412,8 @@ bool App::preformSpotifyAuthorization()
             request->send(404, "text/plain", "Failed to load token, check serial monitor");
         }
     });
+
+    _server.begin();
 
     /* Wait until the user authenticates the device from the web. */
     log_i("Waiting for spotify auth to finish.");

@@ -4,6 +4,7 @@
 #include <WiFiClientSecure.h>
 #include <AsyncWebSocket.h>
 #include <SpotifyArduino.h>
+#include <AsyncTCP.h>
 
 #include "Bitmap.h"
 #include "Render.h"
@@ -32,7 +33,8 @@ private:
     Render _render;
     SlideGeneral _slideGeneral;
     AsyncWebServer _server;
-    WiFiClientSecure _client;
+    WiFiClientSecure _wifiClient;
+    HTTPClient _httpClient;
     SpotifyArduino _spotify;
 
     struct Config {
