@@ -1,12 +1,13 @@
 #pragma once
 
 #include <Preferences.h>
+#include <WiFiClientSecure.h>
 #include <AsyncWebSocket.h>
+#include <SpotifyArduino.h>
 
 #include "Bitmap.h"
 #include "Render.h"
 #include "Display.h"
-#include "Spotify.h"
 #include "slides/SlideGeneral.h"
 
 namespace ts {
@@ -24,7 +25,6 @@ private:
     bool preformFirstTimeSetup();
     bool preformSpotifyAuthorization();
     void displayGeneral(Strings::Select severity, Strings::Select primary, Strings::Select secondary);
-    static void generateSpotifyCodeVerifier(char* codeVerifier, uint32_t codeLength);
 
     Preferences _prefs;
     Display _display;
@@ -32,7 +32,8 @@ private:
     Render _render;
     SlideGeneral _slideGeneral;
     AsyncWebServer _server;
-    Spotify _spotify;
+    WiFiClientSecure _client;
+    SpotifyArduino _spotify;
 
     struct Config {
         bool isFirstTimeSetup;

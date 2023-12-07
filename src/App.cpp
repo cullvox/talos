@@ -11,6 +11,7 @@
 #include <base64.h>
 #include <ESPNtpClient.h>
 
+
 #include <esp_ota_ops.h>
 
 #include "Config.h"
@@ -20,12 +21,12 @@
 #include "Neuton_Regular.h"
 #include "App.h"
 
-
 namespace ts {
 
 App::App()
     : _display()
     , _buffer(_display.extent())
+    , _spotify(_client)
     , _server(80)
 {
     memset(_config.wifiSSID, 0, sizeof(_config.wifiSSID));
@@ -111,7 +112,6 @@ bool App::init()
     {
         preformFirstTimeSetup();
     }
-
 
     /* Preform authentication for Spotify. */
     if (_config.spotifyEnabled && !_config.spotifyAuthorized)
@@ -368,13 +368,45 @@ bool App::preformSpotifyAuthorization()
     log_i("Beginning MDNS");
     MDNS.begin("talos");
 
-    _spotify.addAuthCallbacks(_server); 
+    _server.on("/spotify", [&](AsyncWebServerRequest* request){
+        String url;
+        url.reserve(500);
+        url.concat(
+            F("https://accounts.spotify.com/authorize/?"
+            "response_type=code"
+            "&client_id=" TS_SPOTIFY_CLIENT_ID
+            "&scope="
+                "user-read-private+"
+                "user-read-currently-playing+"
+                "user-read-playback-state"
+            "&redirect_uri=http%3A%2F%2Ftalos.local%2Fspotify_callback"
+            "&code_challenge_method=S256"
+            "&code_challenge="));
+        url.concat(_spotify.generateCodeChallengeForPKCE());
+        request->redirect(url);
+    });
+
+    _server.on("/spotify_callback", [&](AsyncWebServerRequest* request){
+        String code = "";
+        const char *refreshToken = NULL;
+        for (uint8_t i = 0; i < request->args(); i++) {
+            if (request->argName(i) == "code") {
+                code = request->arg(i);
+                refreshToken = _spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback", true); /* We're using PKCE. */
+            }
+        }
+
+        if (refreshToken != NULL) {
+            request->send(200, "text/plain", refreshToken);
+            finished = true;
+        } else {
+            request->send(404, "text/plain", "Failed to load token, check serial monitor");
+        }
+    });
 
     /* Wait until the user authenticates the device from the web. */
+    log_i("Waiting for spotify auth to finish.");
     while (!finished) { }
-
-    if (_spotify.isRefreshRequired())
-        _spotify.blockingUpdateRefreshToken();
 
     /* Cleanup server stuffs. */
     _server.end();
