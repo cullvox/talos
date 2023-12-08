@@ -75,6 +75,7 @@ bool App::init()
 
 
     _wifiClient.setCACert(spotify_server_cert);
+    //_wifiClient.setInsecure();
     _spotify.setClientId(TS_SPOTIFY_CLIENT_ID);
 
 
@@ -402,15 +403,7 @@ bool App::preformSpotifyAuthorization()
             }
         }
 
-        const char *refreshToken = NULL;
-        refreshToken = _spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback", true); /* We're using PKCE. */
-
-        if (refreshToken != NULL) {
-            request->send(200, "text/plain", refreshToken);
-            finished = true;
-        } else {
-            request->send(404, "text/plain", "Failed to load token, check serial monitor");
-        }
+        finished = true;
     });
 
     _server.begin();
@@ -418,6 +411,19 @@ bool App::preformSpotifyAuthorization()
     /* Wait until the user authenticates the device from the web. */
     log_i("Waiting for spotify auth to finish.");
     while (!finished) { }
+
+    const char *refreshToken = NULL;
+    refreshToken = _spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback", true); /* We're using PKCE. */
+
+    if (refreshToken)
+        log_i("Recieved refresh token %s", refreshToken);
+
+    // if (refreshToken != NULL) {
+    //     request->send(200, "text/plain", refreshToken);
+    //     
+    // } else {
+    //     request->send(404, "text/plain", "Failed to load token, check serial monitor");
+    // }
 
     /* Cleanup server stuffs. */
     _server.end();
