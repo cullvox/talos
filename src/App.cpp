@@ -7,8 +7,6 @@
 #include <ESPmDNS.h>
 #include <DNSServer.h>
 #include <SPIFFS.h>
-#include <mbedtls/sha256.h>
-#include <base64.h>
 #include <ESPNtpClient.h>
 #include <SpotifyArduinoCert.h>
 
@@ -19,7 +17,6 @@
 #include "Version.h"
 #include "Print.h"
 #include "Secrets.h"
-#include "Neuton_Regular.h"
 #include "App.h"
 
 namespace ts {
@@ -145,22 +142,25 @@ public:
     }
     void handleRequest(AsyncWebServerRequest *request)
     {
-        log_i("Sending first time setup page to browser.");
+        
 
         if (request->method() == HTTP_GET &&
             request->url() == "/css/pico.min.css") {
+            log_i("Sending /css/pico.min.css");
             request->send(SPIFFS, "/css/pico.min.css", "text/css");
             return;
         } else if (request->method() == HTTP_GET &&
             request->url() == "/css/font-awesome.min.css") {
+                log_i("Sending /css/font-awesome.min.css");
             request->send(SPIFFS, "/css/font-awesome.min.css", "text/css");
             return;
-        } else if (request->method() == HTTP_GET &&
-            request->url() == "/fonts/fontawesome-webfont.ttf") {
-            request->send(SPIFFS, "/fonts/fontawesome-webfont.ttf", "text/css");
-            return;
+       // } else if (request->method() == HTTP_GET &&
+       //     request->url() == "/fonts/fontawesome-webfont.ttf?v=4.7.0") {
+       //     request->send(SPIFFS, "/fonts/fontawesome-webfont.ttf", "text/font");
+       //     return;
         } else if (request->method() == HTTP_GET &&
             request->url() == "/") {
+            log_i("Sending /first_time_setup.html");
             request->send(SPIFFS, "/first_time_setup.html");
             return;
         }
@@ -377,20 +377,21 @@ bool App::preformSpotifyAuthorization()
     MDNS.begin("talos");
 
     _server.on("/spotify", [&](AsyncWebServerRequest* request){
-        String url;
-        url.reserve(500);
-        url.concat(
-            F("https://accounts.spotify.com/authorize/?"
+        char url[500];
+        snprintf(url, sizeof(url),
+            "https://accounts.spotify.com/authorize/?"
             "response_type=code"
-            "&client_id=" TS_SPOTIFY_CLIENT_ID
+            "&client_id=%s"
             "&scope="
                 "user-read-private+"
                 "user-read-currently-playing+"
                 "user-read-playback-state"
-            "&redirect_uri=http%3A%2F%2Ftalos.local%2Fspotify_callback"
+            "&redirect_uri=%s"
             "&code_challenge_method=S256"
-            "&code_challenge="));
-        url.concat(_spotify.generateCodeChallengeForPKCE());
+            "&code_challenge=%s", 
+            TS_SPOTIFY_CLIENT_ID, "http%3A%2F%2Ftalos.local%2Fspotify_callback", _spotify.generateCodeChallengeForPKCE());
+
+        log_i("Redirecting to spotify auth: %s", url);
         request->redirect(url);
     });
 
