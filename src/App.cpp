@@ -1,5 +1,7 @@
 #include <atomic>
 
+#include <esp_ota_ops.h>
+
 #include <Arduino.h>
 #include <Preferences.h>
 #include <WiFi.h>
@@ -8,10 +10,6 @@
 #include <DNSServer.h>
 #include <SPIFFS.h>
 #include <ESPNtpClient.h>
-#include <SpotifyArduinoCert.h>
-
-
-#include <esp_ota_ops.h>
 
 #include "Config.h"
 #include "Version.h"
@@ -71,7 +69,7 @@ bool App::init()
 
 
 
-    _wifiClient.setCACert(spotify_server_cert);
+    _wifiClient.setCACert(SpotifyCert::server);
     //_wifiClient.setInsecure();
     _spotify.setClientId(TS_SPOTIFY_CLIENT_ID);
 
@@ -378,31 +376,33 @@ bool App::preformSpotifyAuthorization()
 
     _server.on("/spotify", [&](AsyncWebServerRequest* request){
         char url[500];
-        snprintf(url, sizeof(url),
-            "https://accounts.spotify.com/authorize/?"
-            "response_type=code"
-            "&client_id=%s"
-            "&scope="
-                "user-read-private+"
-                "user-read-currently-playing+"
-                "user-read-playback-state"
-            "&redirect_uri=%s"
-            "&code_challenge_method=S256"
-            "&code_challenge=%s", 
-            TS_SPOTIFY_CLIENT_ID, "http%3A%2F%2Ftalos.local%2Fspotify_callback", _spotify.generateCodeChallengeForPKCE());
+        const char* scopes = "user-read-private+"
+                             "user-read-currently-playing+"
+                             "user-read-playback-state";
+
+        _spotify.generateRedirectForPKCE(scopes, "http%3A%2F%2Ftalos.local%2Fspotify_callback", url, sizeof(url));
 
         log_i("Redirecting to spotify auth: %s", url);
         request->redirect(url);
     });
 
-    String code = "";
+    
     _server.on("/spotify_callback", [&](AsyncWebServerRequest* request){        
+        String code;
         for (uint8_t i = 0; i < request->args(); i++) {
             if (request->argName(i) == "code") {
                 code = request->arg(i);
                 log_i("Recieved code from spotify: %s", code.c_str());
             }
         }
+
+        const char *refreshToken = NULL;
+        refreshToken = _spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback", true); /* We're using PKCE. */
+
+        if (refreshToken)
+            log_i("Recieved refresh token %s", refreshToken);
+        else 
+            log_i("Could not get a refresh token!");
 
         finished = true;
     });
@@ -411,13 +411,7 @@ bool App::preformSpotifyAuthorization()
 
     /* Wait until the user authenticates the device from the web. */
     log_i("Waiting for spotify auth to finish.");
-    while (!finished) { }
-
-    const char *refreshToken = NULL;
-    refreshToken = _spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback", true); /* We're using PKCE. */
-
-    if (refreshToken)
-        log_i("Recieved refresh token %s", refreshToken);
+    while (!finished) yield();
 
     // if (refreshToken != NULL) {
     //     request->send(200, "text/plain", refreshToken);
