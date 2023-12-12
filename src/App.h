@@ -3,8 +3,7 @@
 #include <Preferences.h>
 #include <WiFiClientSecure.h>
 #include <AsyncWebSocket.h>
-#include <SpotifyArduino.h>
-#include <AsyncTCP.h>
+#include <SpotifyESP.h>
 
 #include "Bitmap.h"
 #include "Render.h"
@@ -35,7 +34,7 @@ private:
     AsyncWebServer _server;
     WiFiClientSecure _wifiClient;
     HTTPClient _httpClient;
-    SpotifyArduino _spotify;
+    SpotifyESP _spotify;
 
     struct Config {
         bool isFirstTimeSetup;
