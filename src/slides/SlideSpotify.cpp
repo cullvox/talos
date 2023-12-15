@@ -26,6 +26,8 @@ static int JPEGDraw(JPEGDRAW *pDraw)
     ts::BitmapInterface* pBuffer = (ts::BitmapInterface*)pDraw->pUser;
     uint8_t threshold = 128;
 
+    log_i("Drawing buffer.");
+
     for(int16_t j = 0; j < h; j++)
     {
         for(int16_t i = 0; i < w; i++)
@@ -94,8 +96,9 @@ static int JPEGDraw(JPEGDRAW *pDraw)
 } /* JPEGDraw() */
 
 
-SlideSpotify::SlideSpotify(SpotifyESP& spotify)
-    : _spotify(spotify)
+SlideSpotify::SlideSpotify(WiFiClientSecure& wifiClient, SpotifyESP& spotify)
+    : _wifiClient(wifiClient)
+    , _spotify(spotify)
 {
 }
 
@@ -109,13 +112,57 @@ bool SlideSpotify::fetch(Render& render)
     auto onCurrentyPlaying = [&](SpotifyCurrentlyPlaying currentlyPlaying){
         strncpy(_title, currentlyPlaying.trackName, SPOTIFY_NAME_CHAR_LENGTH);
         strncpy(_artist, currentlyPlaying.artists[0].artistName, SPOTIFY_NAME_CHAR_LENGTH);
-        strncpy(imageURL, currentlyPlaying.albumImages[0].url, SPOTIFY_URL_CHAR_LENGTH);
+
+        /* Get the closest to 300x300*/
+        //int smallest = 0;
+        //int smallestWidth = currentlyPlaying.albumImages[0].width;
+
+        // for (int i = 0; i < currentlyPlaying.numImages; i++)
+        // {
+        //     if (currentlyPlaying.albumImages[i].width < smallestWidth) 
+        //     {
+        //         smallestWidth = currentlyPlaying.albumImages[i].width;
+        //         smallest = i;
+        //     }
+        // }
+
+
+        strncpy(imageURL, currentlyPlaying.albumImages[/* smallest */ 1].url, SPOTIFY_URL_CHAR_LENGTH);
+
     };
 
     _spotify.getCurrentlyPlayingTrack(onCurrentyPlaying, "US");
 
+    yield();
+
+    _wifiClient.setCACert(SpotifyCert::imageServer);
+
+    log_i("Memory before gathering image: %d", ESP.getFreeHeap());
+
     if (!_spotify.getImage(imageURL, &buffer, &bufferSize))
         log_w("Could not get a Spotify image, not displaying.");
+
+    // _spotify.getImage());
+
+
+    
+
+
+    return true;
+}
+
+int32_t STREAM_JPEG_READ_CALLBACK(JPEGFILE *pFile, uint8_t *pBuf, int32_t iLen);
+int32_t STREAM_JPEG_SEEK_CALLBACK(JPEGFILE *pFile, int32_t iPosition);
+int STREAM_JPEG_DRAW_CALLBACK(JPEGDRAW *pDraw);
+void * STREAM_JPEG_OPEN_CALLBACK(const char *szFilename, int32_t *pFileSize);
+void STREAM_JPEG_CLOSE_CALLBACK(void *pHandle);
+
+void SlideSpotify::render(Render& render)
+{
+    const int16_t titleY = 480/2;
+    const int16_t largeFont = 96;
+    const int16_t smallFont = 56;
+
 
     TS_INFO("Creting a JPEG description!\n");
     JPEGDEC* dec = new JPEGDEC();
@@ -125,11 +172,15 @@ bool SlideSpotify::fetch(Render& render)
     dec->setUserPointer(render.getBitmap());
     dec->setPixelType(ONE_BIT_DITHERED);
     
+    // dec->open()
+
     TS_INFO("Opening JPEG flash\n");
     if (!dec->openRAM(buffer, bufferSize, JPEGDraw))
     {
         TS_ERROR("Could not open JPEGDEC from memory!\n");
-    }    
+    }
+
+    //dec->open()    
     
     dec->setUserPointer(render.getBitmap());
     
@@ -140,15 +191,6 @@ bool SlideSpotify::fetch(Render& render)
     }
     
     TS_INFO("Decoded JPEG image!\n");
-
-    return true;
-}
-
-void SlideSpotify::render(Render& render)
-{
-    const int16_t titleY = 480/2;
-    const int16_t largeFont = 96;
-    const int16_t smallFont = 56;
 
     render
         .setAlignment(RenderAlign::eBottomLeft)
@@ -166,6 +208,8 @@ void SlideSpotify::render(Render& render)
         .setAlignment(RenderAlign::eTopLeft)
         .setCursor(Vector2i{10, (int16_t)(titleY + largeFont/2)})
         .drawText(_artist); 
+
+    
 
     if (buffer)
         free(buffer);

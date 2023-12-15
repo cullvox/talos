@@ -75,13 +75,6 @@ bool App::init()
     _spotify.setClientId(TS_SPOTIFY_CLIENT_ID);
 
 
-    // if (!_render.loadFont("/fonts/Neuton-Regular.ttf", 1))
-    // {
-    //     log_e("Could not load default font!\n");
-    //     return false;
-    // }
-
-
     SPI.begin(TS_PIN_SPI_CLK, TS_PIN_SPI_CIPO, TS_PIN_SPI_COPI, TS_PIN_PAPER_SPI_CS);
     if (!_display.begin(TS_PIN_PAPER_SPI_CS, TS_PIN_PAPER_RST, TS_PIN_PAPER_DC, TS_PIN_PAPER_BUSY, TS_PIN_PAPER_PWR)) 
     {
@@ -124,11 +117,12 @@ bool App::init()
     }
 
     /* Display the TALOS splash screen. */
-    SlideSpotify slideSpotify(_spotify);
+    SlideSpotify slideSpotify(_wifiClient, _spotify);
     slideSpotify.fetch(_render);
+
+    _buffer.clear();
     slideSpotify.render(_render);
-
-
+    _display.present(_buffer.data());
 
     return true;
 }
@@ -355,6 +349,7 @@ bool App::preformFirstTimeSetup()
     /* Reset spotify authorizations. */
     prefs.putBool("spotenable", _config.spotifyEnabled);
     prefs.putBool("spotauthed", false);
+
     prefs.end();
 
     log_i("Setup complete!");

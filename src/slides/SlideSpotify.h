@@ -7,7 +7,7 @@ namespace ts {
 
 class SlideSpotify : public Slide {
 public:
-    SlideSpotify(SpotifyESP& _spotify);
+    SlideSpotify(WiFiClientSecure& wifiClient, SpotifyESP& _spotify);
 
     virtual const char* name() { return "SpotifySlide"; }
     virtual bool fetch(Render& render) override;
@@ -15,6 +15,7 @@ public:
     virtual void render(Render& render) override;
 
 private:
+    WiFiClientSecure& _wifiClient;
     SpotifyESP& _spotify;
     Strings::Select _currentlyPlaying;    
     uint8_t* buffer = nullptr;

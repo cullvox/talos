@@ -8,7 +8,8 @@ Render::Render()
 {
     _ofr.set_printFunc(std::bind(&Render::ofr_print, this, std::placeholders::_1));
     _ofr.set_drawPixel(std::bind(&Render::ofr_drawPixel, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-    _ofr.setDebugLevel(OFR_DEBUG | OFR_ERROR | OFR_INFO);
+    // _ofr.setDebugLevel(OFR_DEBUG | OFR_ERROR | OFR_INFO);
+    _ofr.setDebugLevel(OFR_ERROR | OFR_INFO);
     _ofr.showCredit();
     _ofr.showFreeTypeVersion();
 }
