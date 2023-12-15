@@ -1,6 +1,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include "JPEGDEC.h"
+#include <StreamUtils.h>
 
 #include "Secrets.h"
 #include "SlideSpotify.h"
@@ -96,9 +97,10 @@ static int JPEGDraw(JPEGDRAW *pDraw)
 } /* JPEGDraw() */
 
 
-SlideSpotify::SlideSpotify(WiFiClientSecure& wifiClient, SpotifyESP& spotify)
+SlideSpotify::SlideSpotify(WiFiClientSecure& wifiClient, SpotifyESP& spotify, char* imageBuffer)
     : _wifiClient(wifiClient)
     , _spotify(spotify)
+    , imageBuffer(imageBuffer)
 {
 }
 
@@ -139,7 +141,7 @@ bool SlideSpotify::fetch(Render& render)
 
     log_i("Memory before gathering image: %d", ESP.getFreeHeap());
 
-    if (!_spotify.getImage(imageURL, &buffer, &bufferSize))
+    if (!_spotify.getImage(imageURL, (uint8_t*)imageBuffer, 35 * 1024))
         log_w("Could not get a Spotify image, not displaying.");
 
     // _spotify.getImage());

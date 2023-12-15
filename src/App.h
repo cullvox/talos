@@ -35,6 +35,7 @@ private:
     WiFiClientSecure _wifiClient;
     HTTPClient _httpClient;
     SpotifyESP _spotify;
+    char* spotifyImageBuffer;
 
     struct Config {
         bool isFirstTimeSetup;

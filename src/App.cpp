@@ -61,13 +61,21 @@ bool App::init()
     _render.setBitmap(_buffer);
     ffsupport_setffs(SPIFFS);
 
-    
+
     if (!_render.loadFont("/fonts/faxnrxwi.ttf"))
     {
         log_e("Could not load the icons font!");
         return false;
     }
 
+
+    
+    /* Create the spotify image buffer. */
+    spotifyImageBuffer = (char*)malloc(35*1024);
+    if (!spotifyImageBuffer)
+    {
+        log_e("Could not allocate spotify image buffer!");
+    }
 
 
     _wifiClient.setCACert(SpotifyCert::server);
@@ -117,7 +125,7 @@ bool App::init()
     }
 
     /* Display the TALOS splash screen. */
-    SlideSpotify slideSpotify(_wifiClient, _spotify);
+    SlideSpotify slideSpotify(_wifiClient, _spotify, spotifyImageBuffer);
     slideSpotify.fetch(_render);
 
     _buffer.clear();
