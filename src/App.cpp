@@ -15,6 +15,7 @@
 #include "Version.h"
 #include "Print.h"
 #include "Secrets.h"
+#include "slides/SlideSpotify.h"
 #include "App.h"
 
 namespace ts {
@@ -123,6 +124,10 @@ bool App::init()
     }
 
     /* Display the TALOS splash screen. */
+    SlideSpotify slideSpotify(_spotify);
+    slideSpotify.fetch(_render);
+    slideSpotify.render(_render);
+
 
 
     return true;

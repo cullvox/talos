@@ -1,10 +1,103 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include "JPEGDEC.h"
 
 #include "Secrets.h"
 #include "SlideSpotify.h"
 
 namespace ts {
+static const uint8_t bayerThresholdMap [4][4] = {
+    {15, 135, 45, 165},
+    {195, 75, 225, 105},
+    {60, 180, 30, 150},
+    {240, 120, 210, 90},
+};
+
+static int JPEGDraw(JPEGDRAW *pDraw)
+{
+    TS_INFO("Drawing image!\n");
+
+    bool dither = true;
+    int16_t x = pDraw->x;
+    int16_t y = pDraw->y;
+    int16_t w = pDraw->iWidth;
+    int16_t h = pDraw->iHeight;
+
+    ts::BitmapInterface* pBuffer = (ts::BitmapInterface*)pDraw->pUser;
+    uint8_t threshold = 128;
+
+    for(int16_t j = 0; j < h; j++)
+    {
+        for(int16_t i = 0; i < w; i++)
+        {
+            pDraw->pPixels[i + j * w] = (pDraw->pPixels[i + j * w] & 0x7e0) >> 5; // extract just the six green channel bits.
+        
+            // Bayer Dithering
+            // 4x4 Bayer ordered dithering algorithm
+            const uint16_t bayerx = (i + j * w) % w;
+            const uint16_t bayery = floor((i + j * w) / w);
+            const uint16_t bayerMapped = 0 + (pDraw->pPixels[i + j * w] - 0) * (255 - 0) / (63 - 0);
+            const uint16_t map = floor((bayerMapped + bayerThresholdMap[bayerx % 4][bayery % 4]) / 2);
+            const ts::Vector2i pos{x+i, y+j};
+            pBuffer->set(pos, (map < threshold) ? false : true);
+        }
+    }
+
+    
+
+    // 
+    // if (dither)
+    // {
+    //     for(int16_t j = 0; j < h; j++)
+    //     {
+    //         for(int16_t i = 0; i < w; i++)
+    //         {
+    //             int8_t oldPixel = constrain(pDraw->pPixels[i + j * w], 0, 0x3F);
+    //             int8_t newPixel = oldPixel & 0x30; // or 0x30 to dither to 2-bit directly. much improved tonal range, but more horizontal banding between blocks.
+    //             pDraw->pPixels[i + j * w] = newPixel;
+    //             int quantError = oldPixel - newPixel;      
+    //             if(i + 1 < w) 
+    //                 pDraw->pPixels[i + 1 + j * w] += quantError * 7 / 16;
+    //             if((i - 1 >= 0) && (j + 1 < h)) 
+    //                 pDraw->pPixels[i - 1 + (j + 1) * w] += quantError * 3 / 16;
+    //             if(j + 1 < h) 
+    //                 pDraw->pPixels[i + (j + 1) * w] += quantError * 5 / 16;
+    //             if((i + 1 < w) && (j + 1 < h)) 
+    //                 pDraw->pPixels[i + 1 + (j + 1) * w] += quantError * 1 / 16;
+    //         } // for i
+    //     } // for j
+    // } // if dither
+  // 
+    // ts::BitmapInterface* pBuffer = (ts::BitmapInterface*)pDraw->pUser;
+    // ts::Vector2i pos;
+    // for(int16_t i = 0; i < w; i++)
+    // {
+    //     for(int16_t j = 0; j < h; j++)
+    //     {
+    //         pos = ts::Vector2i{(int16_t)(x+i), (int16_t)(y+j)};
+    //         
+    //         switch (constrain(pDraw->pPixels[i + j * w] >> 4, 0, 3))
+    //         {
+    //             
+    //             case 0:
+    //             pBuffer->set(pos, false);
+    //             break;
+    //             case 1:
+    //             case 2:
+    //             case 3:
+    //                 pBuffer->set(pos, true);
+    //             break;
+    //         } // switch
+    //     } // for j
+    // } // for i
+    return 1;
+} /* JPEGDraw() */
+
+
+SlideSpotify::SlideSpotify(SpotifyESP& spotify)
+    : _spotify(spotify)
+{
+}
 
 bool SlideSpotify::fetch(Render& render)
 {
@@ -12,121 +105,41 @@ bool SlideSpotify::fetch(Render& render)
     /* Spotifys API requires us to generate a token before other requests. */
     TS_INFO("Requesting Spotify access token\n");
     
-    HTTPClient http;
-    if (!http.begin("https://accounts.spotify.com/api/token"))
+    char imageURL[SPOTIFY_URL_CHAR_LENGTH];
+    auto onCurrentyPlaying = [&](SpotifyCurrentlyPlaying currentlyPlaying){
+        strncpy(_title, currentlyPlaying.trackName, SPOTIFY_NAME_CHAR_LENGTH);
+        strncpy(_artist, currentlyPlaying.artists[0].artistName, SPOTIFY_NAME_CHAR_LENGTH);
+        strncpy(imageURL, currentlyPlaying.albumImages[0].url, SPOTIFY_URL_CHAR_LENGTH);
+    };
+
+    _spotify.getCurrentlyPlayingTrack(onCurrentyPlaying, "US");
+
+    if (!_spotify.getImage(imageURL, &buffer, &bufferSize))
+        log_w("Could not get a Spotify image, not displaying.");
+
+    TS_INFO("Creting a JPEG description!\n");
+    JPEGDEC* dec = new JPEGDEC();
+    
+    TS_INFOF("Bitmap: %p\n", render.getBitmap());
+    
+    dec->setUserPointer(render.getBitmap());
+    dec->setPixelType(ONE_BIT_DITHERED);
+    
+    TS_INFO("Opening JPEG flash\n");
+    if (!dec->openRAM(buffer, bufferSize, JPEGDraw))
     {
-        TS_ERROR("Could not begin HTTP client for Spotify token request!\n");
-        return false;
-    }
-
-    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-
-    int httpCode = 0;
-    // httpCode = http.POST("grant_type=client_credentials&client_id=" TS_SECRET_SPOTIFY_CLIENT_ID "&client_secret=" TS_SECRET_SPOTIFY_CLIENT_SECRET);
-
-    String payload = http.getString();
-    http.end();
-
-    if (httpCode < 0) 
-    {
-        TS_ERROR("Request failed for Spotify access token.\n");
-        return false; 
+        TS_ERROR("Could not open JPEGDEC from memory!\n");
     }    
-
-    TS_INFOF("Spotify Payload: %s", payload.c_str());
-
-    /* Parse the JSON payload for an access token. */
-    String accessToken = "";
     
-    {
-        StaticJsonDocument<256> json;
-        deserializeJson(json, payload);
-
-        accessToken = "Bearer " + json["access_token"].as<String>();
-    }
-
-    TS_INFOF("Recieved Spotify access token: %s\n", accessToken.c_str());
-
-    /* Request the users playback information. */
-    http.begin("https://api.spotify.com/v1/me/player");
-    http.addHeader("Authorization", accessToken);
+    dec->setUserPointer(render.getBitmap());
     
-    httpCode = http.GET();
-
-    payload = http.getString();
-    http.end();
-
-    if (httpCode < 0) 
+    TS_INFO("Decoding jpeg image!\n");
+    if (!dec->decode(0, 0, 0))
     {
-        TS_ERROR("Request failed for Spotify -> get playback state.");
-        return false; 
+        TS_ERROR("Could not decode JPEGDEC image!\n");
     }
-
-    TS_INFOF("Spotify Payload: %s", payload.c_str());
-
-    {
-        StaticJsonDocument<1024> json;
-        deserializeJson(json, payload);
-
-        _artist = json["item"]["artists"][0]["name"].as<String>();
-        _title = json["item"]["name"].as<String>();
-        _currentlyPlaying = json["is_playing"].as<bool>() ? Strings::ePlaybackNowPlaying : Strings::ePlaybackWasPlaying;
-    }
-
-
-
-    // imageURL = "http" + imageURL.substring(5);
-// 
-    // if (!http.begin(imageURL))
-    // {
-    //     TS_ERROR("http Failed!\n");
-    //     return false;
-    // }
-// 
-    // http.addHeader("Connection", "close");
-// 
-    // // Send HTTP GET request
-    // httpResponseCode = http.GET();
-    // 
-    // if (httpResponseCode > 0) {
-    //     printf("HTTP Response code: %d\n", httpResponseCode);
-    //     
-    //     payload = http.getString();
-    //     
-    //     TS_ERRORF("%s\n", payload.c_str());
-    // }
-    // else {
-    //     printf("Error code: %d", httpResponseCode);
-    //     return false;
-    // }
-    // 
-    // // Free resources
-    // http.end();
-// 
-// 
-    // TS_INFO("Creting a JPEG description!\n");
-    // JPEGDEC* dec = new JPEGDEC();
-// 
-    // TS_INFOF("Bitmap: %p\n", render.getBitmap());
-// 
-    // dec->setUserPointer(render.getBitmap());
-    // dec->setPixelType(ONE_BIT_DITHERED);
-// 
-    // TS_INFO("Opening JPEG flash\n");
-    // if (!dec->openRAM((uint8_t*)payload.c_str(), payload.length(), JPEGDraw))
-    // {
-    //     TS_ERROR("Could not open JPEGDEC from memory!\n");
-    // }    
-// 
-    // dec->setUserPointer(render.getBitmap());
-// 
-    // TS_INFO("Decoding jpeg image!\n");
-    // if (!dec->decode(0, 0, 0))
-    // {
-    //     TS_ERROR("Could not decode JPEGDEC image!\n");
-    // }
-// 
-    // TS_INFO("Decoded JPEG image!\n");
+    
+    TS_INFO("Decoded JPEG image!\n");
 
     return true;
 }
@@ -148,11 +161,14 @@ void SlideSpotify::render(Render& render)
         .setFontSize(96)
         .setAlignment(RenderAlign::eMiddleLeft)
         .setCursor(Vector2i{10, titleY})
-        .drawText(_title.c_str())
+        .drawText(_title)
 
         .setAlignment(RenderAlign::eTopLeft)
         .setCursor(Vector2i{10, (int16_t)(titleY + largeFont/2)})
-        .drawText(_artist.c_str()); 
+        .drawText(_artist); 
+
+    if (buffer)
+        free(buffer);
 
 }
 

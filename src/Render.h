@@ -70,6 +70,8 @@ public:
     Render& drawTextFormat(const char* format, ...);
     Render& drawTextFromFlash(Strings::Select selection);
 
+    //Render& drawJpeg(Vector2i pos, const uint8_t* data, size_t length);
+
     bool loadFont(const unsigned char* data, size_t size);
     bool loadFont(const char* path);
     void unloadFont();
