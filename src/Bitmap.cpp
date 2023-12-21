@@ -116,7 +116,7 @@ BitmapAlloc::BitmapAlloc(Extent2i extent, bool usePsRam)
 
     if (!_data) 
     {
-        assert(false && "Ran out of memory!");
+        log_e("Could not allocate memory!");
         _what = Result::eOutOfMemoryError;
         return;
     }
@@ -134,6 +134,23 @@ BitmapAlloc::BitmapAlloc(Extent2i extent, const uint8_t* buffer, bool usePsRam)
 BitmapAlloc::~BitmapAlloc()
 {
     free(_data);
+}
+
+BitmapAlloc& BitmapAlloc::operator=(BitmapAlloc&& rhs)
+{
+    _extent = rhs._extent;
+    _widthBytes = rhs._widthBytes;
+    _heightBytes = rhs._heightBytes;
+    _sizeBytes = rhs._sizeBytes;
+    _data = rhs._data;
+
+    rhs._extent = {};
+    rhs._widthBytes = {};
+    rhs._heightBytes = {};
+    rhs._sizeBytes = {};
+    rhs._data = {};
+
+    return *this;
 }
 
 } // namespace talos

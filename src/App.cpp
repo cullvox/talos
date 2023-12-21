@@ -22,10 +22,18 @@ namespace ts {
 
 App::App()
     : _display()
-    , _buffer(_display.extent())
-    , _spotify(_wifiClient, _httpClient)
+    , _spotify(_wifiClient, _httpClient, TS_SPOTIFY_CLIENT_ID)
     , _server(80)
 {
+    printStartup();
+
+    if (!psramInit())
+    {
+        log_e("Could not initialize PSRAM!");
+    }
+
+    _buffer = BitmapAlloc(_display.extent(), true);
+
     memset(_config.wifiSSID, 0, sizeof(_config.wifiSSID));
     memset(_config.wifiPassword, 0, sizeof(_config.wifiPassword));
     memset(_config.wifiIdentity, 0, sizeof(_config.wifiIdentity));
@@ -35,19 +43,6 @@ App::App()
 
 bool App::init()
 {
-        
-    /* Print out a nice little logo. */
-    const esp_app_desc_t* app = esp_ota_get_app_description();
-
-    log_printf("");
-    log_printf("ooooooooooooo       .o.       ooooo          .oooooo.    .oooooooo " "\tCommit %s\n", TALOS_VERSION_GIT_HASH_SHORT);
-    log_printf("8'   888   `8      .888.      `888'         d8P'  `Y8b  d8P'    `Y8" "\tTag %s\n", TALOS_VERSION_GIT_TAG);
-    log_printf("     888          .8 888.      888         888      888 Y88bo.     " "\tVersion %s\n", TALOS_VERSION_STRING);
-    log_printf("     888         .8  `888.     888         888      888  ` Y8888o. " "\tDate %s\n", app->date);
-    log_printf("     888        .88ooo8888.    888         888      888      ` Y88b" "\tIDF Version %s\n", app->idf_ver);
-    log_printf("     888       .8'     `888.   888       o `88b    d88' oo     .d8P" "\tArduino %d.%d.%d\n", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
-    log_printf("    o888o     o88o     o8888o o888ooooood8  `Y8bood8P'  88888888P' " "\tby Caden Miller (https://cadenmiller.dev)\n");
-    log_printf("");
 
     if (!SPIFFS.begin(true))
     {
@@ -68,20 +63,19 @@ bool App::init()
         return false;
     }
 
-
-    
+#ifdef TALOS_SUPPORT_SPOTIFY_IMAGES    
     /* Create the spotify image buffer. */
-    spotifyImageBuffer = (char*)malloc(35*1024);
+
+    log_i("PSRAM size: %d", ESP.getPsramSize());
+    spotifyImageBuffer = (char*)malloc(10*1024);
     if (!spotifyImageBuffer)
     {
         log_e("Could not allocate spotify image buffer!");
     }
-
+#endif
 
     _wifiClient.setCACert(SpotifyCert::server);
     //_wifiClient.setInsecure();
-    _spotify.setClientId(TS_SPOTIFY_CLIENT_ID);
-
 
     SPI.begin(TS_PIN_SPI_CLK, TS_PIN_SPI_CIPO, TS_PIN_SPI_COPI, TS_PIN_PAPER_SPI_CS);
     if (!_display.begin(TS_PIN_PAPER_SPI_CS, TS_PIN_PAPER_RST, TS_PIN_PAPER_DC, TS_PIN_PAPER_BUSY, TS_PIN_PAPER_PWR)) 
@@ -97,14 +91,19 @@ bool App::init()
     _prefs.getBytes("wifipass", _config.wifiPassword, sizeof(_config.wifiPassword)-1);
     _config.spotifyEnabled = _prefs.getBool("spotenable", false);
     _config.spotifyAuthorized = _prefs.getBool("spotauthed", false);
+    _config.spotifyRefreshToken = _prefs.getString("spotrefresh", "");
 
     log_i("config: fts = %s", _config.isFirstTimeSetup ? "true" : "false");
     log_i("config: wifissid = %s", _config.wifiSSID);
     log_i("config: wifipass = %s", _config.wifiPassword);
     log_i("config: spotenable = %s", _config.spotifyEnabled ? "true" : "false");
-    log_i("config: spotauthed = %s", _config.spotifyAuthorized ? "true" : "false");
+    log_i("config: spotrefresh = %s", _config.spotifyRefreshToken.c_str());
+    // log_i("config: spotrefreshtime = %d")
 
     _prefs.end();
+
+    if (_config.spotifyRefreshToken.isEmpty())
+        _config.isFirstTimeSetup = true;
 
     /* Preform the first time setup. */
     if (_config.isFirstTimeSetup)
@@ -122,7 +121,15 @@ bool App::init()
     if (_config.spotifyEnabled && !_config.spotifyAuthorized)
     {
         if (!preformSpotifyAuthorization()) return false;
+        _prefs.begin("talos");
+        _prefs.putString("spotrefresh", _spotify.getRefreshToken());
+        _prefs.end();
     }
+
+    _spotify.setRefreshToken(_config.spotifyRefreshToken.c_str());
+
+    if (!refreshSpotify())
+        log_e("Could not refresh Spotify's refresh token!");
 
     /* Display the TALOS splash screen. */
     SlideSpotify slideSpotify(_wifiClient, _spotify, spotifyImageBuffer);
@@ -133,6 +140,28 @@ bool App::init()
     _display.present(_buffer.data());
 
     return true;
+}
+
+bool App::run()
+{
+    return true;
+}
+
+void App::printStartup()
+{
+        
+    /* Print out a nice little logo. */
+    const esp_app_desc_t* app = esp_ota_get_app_description();
+
+    log_printf("");
+    log_printf("ooooooooooooo       .o.       ooooo          .oooooo.    .oooooooo " "\tCommit %s\n", TALOS_VERSION_GIT_HASH_SHORT);
+    log_printf("8'   888   `8      .888.      `888'         d8P'  `Y8b  d8P'    `Y8" "\tTag %s\n", TALOS_VERSION_GIT_TAG);
+    log_printf("     888          .8 888.      888         888      888 Y88bo.     " "\tVersion %s\n", TALOS_VERSION_STRING);
+    log_printf("     888         .8  `888.     888         888      888  ` Y8888o. " "\tDate %s\n", app->date);
+    log_printf("     888        .88ooo8888.    888         888      888      ` Y88b" "\tIDF Version %s\n", app->idf_ver);
+    log_printf("     888       .8'     `888.   888       o `88b    d88' oo     .d8P" "\tArduino %d.%d.%d\n", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
+    log_printf("    o888o     o88o     o8888o o888ooooood8  `Y8bood8P'  88888888P' " "\tby Caden Miller (https://cadenmiller.dev)\n");
+    log_printf("");
 }
 
 class CaptiveRequestHandler : public AsyncWebHandler
@@ -159,10 +188,10 @@ public:
                 log_i("Sending /css/font-awesome.min.css");
             request->send(SPIFFS, "/css/font-awesome.min.css", "text/css");
             return;
-       // } else if (request->method() == HTTP_GET &&
-       //     request->url() == "/fonts/fontawesome-webfont.ttf?v=4.7.0") {
-       //     request->send(SPIFFS, "/fonts/fontawesome-webfont.ttf", "text/font");
-       //     return;
+        } else if (request->method() == HTTP_GET &&
+            request->url() == "/fonts/fontawesome-webfont.ttf?v=4.7.0") {
+            request->send(SPIFFS, "/fonts/fontawesome-webfont.ttf", "text/font");
+            return;
         } else if (request->method() == HTTP_GET &&
             request->url() == "/") {
             log_i("Sending /first_time_setup.html");
@@ -330,9 +359,7 @@ bool App::preformFirstTimeSetup()
  
         TS_INFOF("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.wifiSSID, _config.wifiPassword);
 
-        
-        
-        request->send(SPIFFS, "text/http", "/setup_complete.html");
+        request->send(SPIFFS, "/setup_complete.html", "text/http");
         finished = true;
     });
  
@@ -342,7 +369,7 @@ bool App::preformFirstTimeSetup()
  
     while (!finished) { dnsServer.processNextRequest(); }
 
-    WiFi.softAPdisconnect(true);
+    // WiFi.softAPdisconnect(true);
 
     dnsServer.stop();
     _server.reset();
@@ -394,23 +421,25 @@ bool App::preformSpotifyAuthorization()
         request->redirect(url);
     });
 
-    
-    _server.on("/spotify_callback", [&](AsyncWebServerRequest* request){        
-        String code;
-        for (uint8_t i = 0; i < request->args(); i++) {
-            if (request->argName(i) == "code") {
-                code = request->arg(i);
-                log_i("Recieved code from spotify: %s", code.c_str());
-            }
+    const char *refreshToken = NULL;
+    _server.on("/spotify_callback", [&](AsyncWebServerRequest* request){                
+        AsyncWebParameter* param = request->getParam("code");
+        if (!param)
+        {
+            log_e("User denied Spotify authetication request!");
+            request->send(200, "text/plain", "Please reauthenticate, user denied authentication!");
+            return;
         }
 
-        const char *refreshToken = NULL;
-        refreshToken = _spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback", true); /* We're using PKCE. */
+        String code = param->value();
 
-        if (refreshToken)
+        refreshToken = _spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback");
+
+        if (refreshToken) {
             log_i("Recieved refresh token %s", refreshToken);
-        else 
+        } else { 
             log_i("Could not get a refresh token!");
+        }
 
         finished = true;
     });
@@ -420,6 +449,13 @@ bool App::preformSpotifyAuthorization()
     /* Wait until the user authenticates the device from the web. */
     log_i("Waiting for spotify auth to finish.");
     while (!finished) yield();
+
+    if (refreshToken)
+    {
+        _prefs.begin("talos");
+        _prefs.putString("spotrefresh", refreshToken);
+        _prefs.end();
+    }
 
     // if (refreshToken != NULL) {
     //     request->send(200, "text/plain", refreshToken);
@@ -431,6 +467,17 @@ bool App::preformSpotifyAuthorization()
     /* Cleanup server stuffs. */
     _server.end();
     MDNS.end();
+
+    return true;
+}
+
+bool App::refreshSpotify()
+{
+    if (!_spotify.checkAndRefreshAccessToken()) return false;
+
+    _prefs.begin("talos");
+    _prefs.putString("spotrefresh", _spotify.getRefreshToken());
+    _prefs.end();
 
     return true;
 }

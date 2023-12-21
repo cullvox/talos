@@ -1,8 +1,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-#include "JPEGDEC.h"
-#include <StreamUtils.h>
 
+#include "JPEGDEC.h"
 #include "Secrets.h"
 #include "SlideSpotify.h"
 
@@ -101,6 +100,8 @@ SlideSpotify::SlideSpotify(WiFiClientSecure& wifiClient, SpotifyESP& spotify, ch
     : _wifiClient(wifiClient)
     , _spotify(spotify)
     , imageBuffer(imageBuffer)
+    , _title()
+    , _artist()
 {
 }
 
@@ -112,6 +113,9 @@ bool SlideSpotify::fetch(Render& render)
     
     char imageURL[SPOTIFY_URL_CHAR_LENGTH];
     auto onCurrentyPlaying = [&](SpotifyCurrentlyPlaying currentlyPlaying){
+
+        log_i("Track name: %s", currentlyPlaying.trackName);
+        log_i("Artist name: %s", currentlyPlaying.artists[0].artistName);
         strncpy(_title, currentlyPlaying.trackName, SPOTIFY_NAME_CHAR_LENGTH);
         strncpy(_artist, currentlyPlaying.artists[0].artistName, SPOTIFY_NAME_CHAR_LENGTH);
 
@@ -129,7 +133,7 @@ bool SlideSpotify::fetch(Render& render)
         // }
 
 
-        strncpy(imageURL, currentlyPlaying.albumImages[/* smallest */ 1].url, SPOTIFY_URL_CHAR_LENGTH);
+        strncpy(imageURL, currentlyPlaying.albumImages[/* smallest */ 2].url, SPOTIFY_URL_CHAR_LENGTH);
 
     };
 
@@ -137,15 +141,15 @@ bool SlideSpotify::fetch(Render& render)
 
     yield();
 
+#ifdef TALOS_SUPPORT_SPOTIFY_IMAGES
     _wifiClient.setCACert(SpotifyCert::imageServer);
 
     log_i("Memory before gathering image: %d", ESP.getFreeHeap());
 
-    if (!_spotify.getImage(imageURL, (uint8_t*)imageBuffer, 35 * 1024))
+    _wifiClient.setInsecure();
+    if (!_spotify.getImage(imageURL, (uint8_t*)imageBuffer, 10 * 1024))
         log_w("Could not get a Spotify image, not displaying.");
-
-    // _spotify.getImage());
-
+#endif
 
     
 
@@ -210,8 +214,6 @@ void SlideSpotify::render(Render& render)
         .setAlignment(RenderAlign::eTopLeft)
         .setCursor(Vector2i{10, (int16_t)(titleY + largeFont/2)})
         .drawText(_artist); 
-
-    
 
     if (buffer)
         free(buffer);

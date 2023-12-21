@@ -247,6 +247,7 @@ void Display::present(const uint8_t* buffer)
             sendData(~buffer[i + j * width/8]);
         }
     }
+
     sendCommand(0x12);
     delayMs(100);
     waitForIdle();

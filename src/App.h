@@ -17,14 +17,18 @@ public:
     App();
 
     bool init();
-    void run();
+    bool run();
     void shutdown();
 
 private:
+    void printStartup();
     bool connectToWiFi();
     bool preformFirstTimeSetup();
     bool preformSpotifyAuthorization();
+    bool refreshSpotify();
+    
     void displayGeneral(Strings::Select severity, Strings::Select primary, Strings::Select secondary);
+
 
     Preferences _prefs;
     Display _display;
@@ -46,6 +50,7 @@ private:
         char wifiPassword[32+1];
         bool spotifyEnabled;
         bool spotifyAuthorized;
+        String spotifyRefreshToken; 
     };
 
     Config _config;
