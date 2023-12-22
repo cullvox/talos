@@ -133,7 +133,7 @@ bool SlideSpotify::fetch(Render& render)
         // }
 
 
-        strncpy(imageURL, currentlyPlaying.albumImages[/* smallest */ 2].url, SPOTIFY_URL_CHAR_LENGTH);
+        strncpy(imageURL, currentlyPlaying.albumImages[/* smallest */ 1].url, SPOTIFY_URL_CHAR_LENGTH);
 
     };
 
@@ -141,18 +141,29 @@ bool SlideSpotify::fetch(Render& render)
 
     yield();
 
+    log_i("Artist: %s", _artist);
+    log_i("Track: %s", _title);
+
 #ifdef TALOS_SUPPORT_SPOTIFY_IMAGES
     _wifiClient.setCACert(SpotifyCert::imageServer);
 
     log_i("Memory before gathering image: %d", ESP.getFreeHeap());
 
-    _wifiClient.setInsecure();
-    if (!_spotify.getImage(imageURL, (uint8_t*)imageBuffer, 10 * 1024))
-        log_w("Could not get a Spotify image, not displaying.");
-#endif
+    if (!_spotify.requestImage(imageURL, &_imageLength)) {
+        log_e("Could not request an image!");
+        return true;
+    }
 
+    _image = (uint8_t*)ps_malloc(_imageLength);
     
+    if (!_image) {
+        log_e("Could not allocate memory for spotify image, no image this time!");
+        return true;
+    }
 
+    if (!_spotify.getImage(_image))
+        log_e("Could not get a Spotify image, not displaying.");
+#endif
 
     return true;
 }
@@ -180,8 +191,8 @@ void SlideSpotify::render(Render& render)
     
     // dec->open()
 
-    TS_INFO("Opening JPEG flash\n");
-    if (!dec->openRAM(buffer, bufferSize, JPEGDraw))
+    log_i("Opening JPEG, Pointer: %p, Length %d \n", _image, _imageLength);
+    if (!dec->openRAM(_image, _imageLength, JPEGDraw))
     {
         TS_ERROR("Could not open JPEGDEC from memory!\n");
     }
@@ -191,7 +202,7 @@ void SlideSpotify::render(Render& render)
     dec->setUserPointer(render.getBitmap());
     
     TS_INFO("Decoding jpeg image!\n");
-    if (!dec->decode(0, 0, 0))
+    if (!dec->decode(300, 100, 0))
     {
         TS_ERROR("Could not decode JPEGDEC image!\n");
     }
@@ -215,8 +226,8 @@ void SlideSpotify::render(Render& render)
         .setCursor(Vector2i{10, (int16_t)(titleY + largeFont/2)})
         .drawText(_artist); 
 
-    if (buffer)
-        free(buffer);
+    if (_image)
+        free(_image);
 
 }
 

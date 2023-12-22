@@ -63,17 +63,6 @@ bool App::init()
         return false;
     }
 
-#ifdef TALOS_SUPPORT_SPOTIFY_IMAGES    
-    /* Create the spotify image buffer. */
-
-    log_i("PSRAM size: %d", ESP.getPsramSize());
-    spotifyImageBuffer = (char*)malloc(10*1024);
-    if (!spotifyImageBuffer)
-    {
-        log_e("Could not allocate spotify image buffer!");
-    }
-#endif
-
     _wifiClient.setCACert(SpotifyCert::server);
     //_wifiClient.setInsecure();
 
@@ -90,13 +79,12 @@ bool App::init()
     _prefs.getBytes("wifissid", _config.wifiSSID, sizeof(_config.wifiSSID)-1);
     _prefs.getBytes("wifipass", _config.wifiPassword, sizeof(_config.wifiPassword)-1);
     _config.spotifyEnabled = _prefs.getBool("spotenable", false);
-    _config.spotifyAuthorized = _prefs.getBool("spotauthed", false);
     _config.spotifyRefreshToken = _prefs.getString("spotrefresh", "");
 
     log_i("config: fts = %s", _config.isFirstTimeSetup ? "true" : "false");
     log_i("config: wifissid = %s", _config.wifiSSID);
     log_i("config: wifipass = %s", _config.wifiPassword);
-    log_i("config: spotenable = %s", _config.spotifyEnabled ? "true" : "false");
+    log_i("config: spotenabled = %d", _config.spotifyEnabled);
     log_i("config: spotrefresh = %s", _config.spotifyRefreshToken.c_str());
     // log_i("config: spotrefreshtime = %d")
 
@@ -118,18 +106,15 @@ bool App::init()
     }
 
     /* Preform authentication for Spotify. */
-    if (_config.spotifyEnabled && !_config.spotifyAuthorized)
+    if (_config.spotifyEnabled && _config.spotifyRefreshToken.isEmpty())
     {
         if (!preformSpotifyAuthorization()) return false;
-        _prefs.begin("talos");
-        _prefs.putString("spotrefresh", _spotify.getRefreshToken());
-        _prefs.end();
+    } else if (_config.spotifyEnabled) {
+        _spotify.setRefreshToken(_config.spotifyRefreshToken.c_str());
+
+        if (!refreshSpotify())
+            log_e("Could not refresh Spotify's refresh token!");
     }
-
-    _spotify.setRefreshToken(_config.spotifyRefreshToken.c_str());
-
-    if (!refreshSpotify())
-        log_e("Could not refresh Spotify's refresh token!");
 
     /* Display the TALOS splash screen. */
     SlideSpotify slideSpotify(_wifiClient, _spotify, spotifyImageBuffer);
@@ -383,7 +368,7 @@ bool App::preformFirstTimeSetup()
     
     /* Reset spotify authorizations. */
     prefs.putBool("spotenable", _config.spotifyEnabled);
-    prefs.putBool("spotauthed", false);
+    prefs.putString("spotrefresh", "");
 
     prefs.end();
 
@@ -452,8 +437,10 @@ bool App::preformSpotifyAuthorization()
 
     if (refreshToken)
     {
+        _config.spotifyRefreshToken = _spotify.getRefreshToken();
+
         _prefs.begin("talos");
-        _prefs.putString("spotrefresh", refreshToken);
+        _prefs.putString("spotrefresh", _config.spotifyRefreshToken);
         _prefs.end();
     }
 
@@ -475,8 +462,10 @@ bool App::refreshSpotify()
 {
     if (!_spotify.checkAndRefreshAccessToken()) return false;
 
+    _config.spotifyRefreshToken = _spotify.getRefreshToken();
+
     _prefs.begin("talos");
-    _prefs.putString("spotrefresh", _spotify.getRefreshToken());
+    _prefs.putString("spotrefresh", _config.spotifyRefreshToken);
     _prefs.end();
 
     return true;

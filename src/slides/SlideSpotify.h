@@ -18,9 +18,9 @@ private:
     WiFiClientSecure& _wifiClient;
     SpotifyESP& _spotify;
     char* imageBuffer;
-    Strings::Select _currentlyPlaying;    
-    uint8_t* buffer = nullptr;
-    int bufferSize = 0;
+    Strings::Select _currentlyPlaying;
+    size_t _imageLength;    
+    uint8_t* _image = nullptr;
     char _title[SPOTIFY_NAME_CHAR_LENGTH];
     char _artist[SPOTIFY_NAME_CHAR_LENGTH];
     
