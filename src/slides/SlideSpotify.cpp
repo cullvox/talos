@@ -145,7 +145,8 @@ bool SlideSpotify::fetch(Render& render)
     log_i("Track: %s", _title);
 
 #ifdef TALOS_SUPPORT_SPOTIFY_IMAGES
-    _wifiClient.setCACert(SpotifyCert::imageServer);
+    // _wifiClient.setCACert(SpotifyCert::imageServer);
+    _wifiClient.setInsecure();
 
     log_i("Memory before gathering image: %d", ESP.getFreeHeap());
 
@@ -202,7 +203,7 @@ void SlideSpotify::render(Render& render)
     dec->setUserPointer(render.getBitmap());
     
     TS_INFO("Decoding jpeg image!\n");
-    if (!dec->decode(300, 100, 0))
+    if (!dec->decode(400, 75, 0))
     {
         TS_ERROR("Could not decode JPEGDEC image!\n");
     }
