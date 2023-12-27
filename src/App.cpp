@@ -418,13 +418,8 @@ bool App::preformSpotifyAuthorization()
 
         String code = param->value();
 
-        refreshToken = _spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback");
-
-        if (refreshToken) {
-            log_i("Recieved refresh token %s", refreshToken);
-        } else { 
-            log_i("Could not get a refresh token!");
-        }
+        if (!_spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback"))
+            return;
 
         finished = true;
     });
@@ -435,14 +430,11 @@ bool App::preformSpotifyAuthorization()
     log_i("Waiting for spotify auth to finish.");
     while (!finished) yield();
 
-    if (refreshToken)
-    {
-        _config.spotifyRefreshToken = _spotify.getRefreshToken();
+    _config.spotifyRefreshToken = _spotify.getRefreshToken();
 
-        _prefs.begin("talos");
-        _prefs.putString("spotrefresh", _config.spotifyRefreshToken);
-        _prefs.end();
-    }
+    _prefs.begin("talos");
+    _prefs.putString("spotrefresh", _config.spotifyRefreshToken);
+    _prefs.end();
 
     // if (refreshToken != NULL) {
     //     request->send(200, "text/plain", refreshToken);

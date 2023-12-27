@@ -145,7 +145,8 @@ bool SlideSpotify::fetch(Render& render)
     log_i("Track: %s", _title);
 
 #ifdef TALOS_SUPPORT_SPOTIFY_IMAGES
-    // _wifiClient.setCACert(SpotifyCert::imageServer);
+
+    _wifiClient.setCACert(SpotifyCert::imageServer);
     _wifiClient.setInsecure();
 
     log_i("Memory before gathering image: %d", ESP.getFreeHeap());
