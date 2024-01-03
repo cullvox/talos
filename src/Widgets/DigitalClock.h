@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Slide.h"
+#include "Widget.h"
 
 namespace ts {
 

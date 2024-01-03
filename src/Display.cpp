@@ -2,8 +2,7 @@
 
 #include <Arduino.h>
 
-#include "Print.h"
-#include "Pins.h"
+#include "Config.h"
 #include "Display.h"
 
 namespace ts {
@@ -214,12 +213,12 @@ void Display::sendData(unsigned char data) {
  */
 void Display::waitForIdle(void) {
     unsigned char busy;
-    TS_INFO("e-Paper Busy\n");
+    log_i("e-Paper Busy\n");
     do {
         sendCommand(0x71);
         busy = digitalRead(_busyPin);
     } while (busy == 0);
-    TS_INFO("e-Paper Busy Release\n");
+    log_i("e-Paper Busy Release\n");
     delayMs(20);
 }
 

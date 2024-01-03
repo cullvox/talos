@@ -12,28 +12,16 @@
 #include <ESPNtpClient.h>
 
 #include "Config.h"
-#include "Version.h"
-#include "Print.h"
-#include "Secrets.h"
 #include "slides/SlideSpotify.h"
 #include "App.h"
 
 namespace ts {
 
-App::App()
+Talos::Talos()
     : _display()
     , _spotify(_wifiClient, _httpClient, TS_SPOTIFY_CLIENT_ID)
     , _server(80)
 {
-    printStartup();
-
-    if (!psramInit())
-    {
-        log_e("Could not initialize PSRAM!");
-    }
-
-    _buffer = BitmapAlloc(_display.extent(), true);
-
     memset(_config.wifiSSID, 0, sizeof(_config.wifiSSID));
     memset(_config.wifiPassword, 0, sizeof(_config.wifiPassword));
     memset(_config.wifiIdentity, 0, sizeof(_config.wifiIdentity));
@@ -41,73 +29,78 @@ App::App()
     _config.isWifiEnterprise = false;
 }
 
-bool App::init()
+bool Talos::init()
 {
+    printBegin("Initializing Devices");
+    printStartup();
 
-    if (!SPIFFS.begin(true))
-    {
-        TS_ERROR("Could not mount SPIFFS!");
-        return false;
+    /* PSRAM is very useful for the Spotify image API and other web things.
+        Without it some things have to be cut out... (Spotify album art) */
+    log_v("Checking for PSRAM...");
+
+    if (psramInit()) {
+        _hasPsram = true;
+        log_v("PSRAM has been initialized");
+    } else {
+        _hasPsram = false;
+        log_i("PSRAM is not initialized");
     }
 
-    TS_INFOF("Does file exist: %d", SPIFFS.exists("/first_time_setup.html"));
+    /* SPIFFS stores the setup webpage and fonts. */
+    log_v("Mounting SPIFFS...");
+    if (!SPIFFS.begin(true)) {
+        log_e("Could not mount SPIFFS!");
+        return false; /* SPIFFS is required for a functional TALOS device. */
+    } else {
+        log_v("Mounted.");
+    }
+
+    _buffer = BitmapAlloc(_display.extent(), _hasPsram);
 
     /* Initialize the display and graphics operations. */
     _render.setBitmap(_buffer);
     ffsupport_setffs(SPIFFS);
 
-
+    log_v("Loading TALOS font...");
     if (!_render.loadFont("/fonts/faxnrxwi.ttf"))
     {
         log_e("Could not load the icons font!");
-        return false;
+        return false; /* The font must be loaded in order to operate TALOS. */
+    } else {
+        log_v("Loaded font.");
     }
 
-    _wifiClient.setCACert(SpotifyCert::server);
-    //_wifiClient.setInsecure();
-
+    /* Initialize the ePaper's SPI. */
     SPI.begin(TS_PIN_SPI_CLK, TS_PIN_SPI_CIPO, TS_PIN_SPI_COPI, TS_PIN_PAPER_SPI_CS);
     if (!_display.begin(TS_PIN_PAPER_SPI_CS, TS_PIN_PAPER_RST, TS_PIN_PAPER_DC, TS_PIN_PAPER_BUSY, TS_PIN_PAPER_PWR)) 
     {
-        TS_INFO("e-Paper Initialization Failed!\n");
-        return false;
+        log_i("Could not initialize the ePaper device!\n");
+        return false; /* The display is required to be initialized properly. */
     }
 
-    _prefs.begin("talos");
-
-    _config.isFirstTimeSetup = _prefs.getBool("fts", true);
-    _prefs.getBytes("wifissid", _config.wifiSSID, sizeof(_config.wifiSSID)-1);
-    _prefs.getBytes("wifipass", _config.wifiPassword, sizeof(_config.wifiPassword)-1);
-    _config.spotifyEnabled = _prefs.getBool("spotenable", false);
-    _config.spotifyRefreshToken = _prefs.getString("spotrefresh", "");
-
-    log_i("config: fts = %s", _config.isFirstTimeSetup ? "true" : "false");
-    log_i("config: wifissid = %s", _config.wifiSSID);
-    log_i("config: wifipass = %s", _config.wifiPassword);
-    log_i("config: spotenabled = %d", _config.spotifyEnabled);
-    log_i("config: spotrefresh = %s", _config.spotifyRefreshToken.c_str());
-    // log_i("config: spotrefreshtime = %d")
-
-    _prefs.end();
+    /* Read in the users configuration, if any. */
+    readConfig();
 
     if (_config.spotifyRefreshToken.isEmpty())
-        _config.isFirstTimeSetup = true;
+        _config.isFirstTimeSetup = true; /* The configuration isn't completely finished. */
 
     /* Preform the first time setup. */
-    if (_config.isFirstTimeSetup)
-    {
+    if (_config.isFirstTimeSetup) {
         if (!preformFirstTimeSetup()) return false;
+        _prefs.begin("talos");
         _prefs.putBool("fts", false);
+        _prefs.end();
     }
 
-    if (!connectToWiFi())
-    {
+    /* Attempt to connect to the users Wi-Fi, on failure -- preform first time setup. */
+    if (!connectToWiFi()) {
         preformFirstTimeSetup();
     }
 
-    /* Preform authentication for Spotify. */
+    /* Check if Spotify was correctly and fully authenticated. */
     if (_config.spotifyEnabled && _config.spotifyRefreshToken.isEmpty())
     {
+        /* Authenticate again. */
         if (!preformSpotifyAuthorization()) return false;
     } else if (_config.spotifyEnabled) {
         _spotify.setRefreshToken(_config.spotifyRefreshToken.c_str());
@@ -116,23 +109,43 @@ bool App::init()
             log_e("Could not refresh Spotify's refresh token!");
     }
 
-    /* Display the TALOS splash screen. */
-    SlideSpotify slideSpotify(_wifiClient, _spotify, spotifyImageBuffer);
+    /* Display the splash page. */
+    SlideSpotify slideSpotify(_wifiClient, _spotify);
     slideSpotify.fetch(_render);
 
     _buffer.clear();
     slideSpotify.render(_render);
     _display.present(_buffer.data());
 
+    printEnd("Initializing Devices");
+
     return true;
 }
 
-bool App::run()
+bool Talos::run()
 {
     return true;
 }
 
-void App::printStartup()
+void Talos::printBegin(const char* name)
+{
+    log_printf("\n");
+    log_printf("=======================================\n");
+    log_printf("BEGIN: %s\n", name);
+    log_printf("=======================================\n");
+    log_printf("\n");
+}
+
+void Talos::printEnd(const char* name)
+{
+    log_printf("\n");
+    log_printf("=======================================\n");
+    log_printf("END: %s\n", name);
+    log_printf("=======================================\n");
+    log_printf("\n");   
+}
+
+void Talos::printStartup()
 {
         
     /* Print out a nice little logo. */
@@ -147,6 +160,31 @@ void App::printStartup()
     log_printf("     888       .8'     `888.   888       o `88b    d88' oo     .d8P" "\tArduino %d.%d.%d\n", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
     log_printf("    o888o     o88o     o8888o o888ooooood8  `Y8bood8P'  88888888P' " "\tby Caden Miller (https://cadenmiller.dev)\n");
     log_printf("");
+}
+
+void Talos::readConfig()
+{
+    _prefs.begin("talos");
+    _config.isFirstTimeSetup = _prefs.getBool("fts", true);
+    _prefs.getBytes("wifissid", _config.wifiSSID, sizeof(_config.wifiSSID)-1);
+    _prefs.getBytes("wifipass", _config.wifiPassword, sizeof(_config.wifiPassword)-1);
+    _config.spotifyEnabled = _prefs.getBool("spotenable", false);
+    _config.spotifyRefreshToken = _prefs.getString("spotrefresh", "");
+
+    log_v("config: fts = %s", _config.isFirstTimeSetup ? "true" : "false");
+    log_v("config: wifissid = %s", _config.wifiSSID);
+    log_v("config: wifipass = %s", _config.wifiPassword);
+    log_v("config: spotenabled = %d", _config.spotifyEnabled);
+    log_v("config: spotrefresh = %s", _config.spotifyRefreshToken.c_str());
+
+    // log_i("config: spotrefreshtime = %d")
+
+    _prefs.end();
+}
+
+void Talos::writeConfig()
+{
+
 }
 
 class CaptiveRequestHandler : public AsyncWebHandler
@@ -188,7 +226,7 @@ public:
     }
 };
 
-bool App::connectToWiFi()
+bool Talos::connectToWiFi()
 {
     log_i("Initiating connection to WiFi: SSID: %s", _config.wifiSSID);
 
@@ -299,13 +337,9 @@ Err_ConnectFailed:
  *  authorizations. 
  * 
 */
-bool App::preformFirstTimeSetup()
+bool Talos::preformFirstTimeSetup()
 {
-    log_printf("\n");
-    log_printf("=======================================\n");
-    log_printf("BEGIN: First Time Setup\n");
-    log_printf("=======================================\n");
-    log_printf("\n");
+    printBegin("First Time Setup");
 
     /* Start the access point. */
     String pass = "ABC1234567";
@@ -330,7 +364,7 @@ bool App::preformFirstTimeSetup()
         int params = request->params();
         for (int i = 0; i < params; i++) {
             AsyncWebParameter* p = request->getParam(i);
-            TS_INFOF("GET [%s]: %s\n", p->name().c_str(), p->value().c_str());
+            log_i("GET [%s]: %s\n", p->name().c_str(), p->value().c_str());
 
             if (p->name() == "wifi_ssid")
                 p->value().getBytes((unsigned char*)_config.wifiSSID, sizeof(_config.wifiSSID)-1);
@@ -342,7 +376,7 @@ bool App::preformFirstTimeSetup()
                 _config.spotifyEnabled = true; /* data race shouldn't occur here... hopefully.  */
         }
  
-        TS_INFOF("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.wifiSSID, _config.wifiPassword);
+        log_i("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.wifiSSID, _config.wifiPassword);
 
         request->send(SPIFFS, "/setup_complete.html", "text/http");
         finished = true;
@@ -352,7 +386,7 @@ bool App::preformFirstTimeSetup()
     _server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
     _server.begin();
  
-    while (!finished) { dnsServer.processNextRequest(); }
+    while (!finished) { dnsServer.processNextRequest(); yield(); }
 
     // WiFi.softAPdisconnect(true);
 
@@ -369,29 +403,24 @@ bool App::preformFirstTimeSetup()
     /* Reset spotify authorizations. */
     prefs.putBool("spotenable", _config.spotifyEnabled);
     prefs.putString("spotrefresh", "");
-
     prefs.end();
 
     log_i("Setup complete!");
 
-    log_i("");
-    log_i("=======================================");
-    log_i("END: First Time Setup");
-    log_i("=======================================");
-    log_i("");
+    printEnd("First Time Setup");
 
     return true;
 }
 
-bool App::preformSpotifyAuthorization()
+bool Talos::preformSpotifyAuthorization()
 {
-    log_i("Beginning Spotify authentication process.");
+    printBegin("Spotify Authentication Process");
 
     /* Add spotify callbacks for the authentication process. */
     std::atomic<bool> finished(false);
 
     /* Start MDNS for to use talos.local for Spotify config. */
-    log_i("Beginning MDNS");
+    log_v("Beginning MDNS");
     MDNS.begin("talos");
 
     _server.on("/spotify", [&](AsyncWebServerRequest* request){
@@ -400,9 +429,10 @@ bool App::preformSpotifyAuthorization()
                              "user-read-currently-playing+"
                              "user-read-playback-state";
 
+        _wifiClient.setCACert(SpotifyCert::server);
         _spotify.generateRedirectForPKCE(scopes, "http%3A%2F%2Ftalos.local%2Fspotify_callback", url, sizeof(url));
 
-        log_i("Redirecting to spotify auth: %s", url);
+        log_v("Redirecting to Spotify authentication URL: %s", url);
         request->redirect(url);
     });
 
@@ -418,6 +448,8 @@ bool App::preformSpotifyAuthorization()
 
         String code = param->value();
 
+        log_v("Recieved Spotify code: %s", code.c_str());
+
         if (!_spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback"))
             return;
 
@@ -427,7 +459,7 @@ bool App::preformSpotifyAuthorization()
     _server.begin();
 
     /* Wait until the user authenticates the device from the web. */
-    log_i("Waiting for spotify auth to finish.");
+    log_i("Waiting for Spotify authentication to finish...");
     while (!finished) yield();
 
     _config.spotifyRefreshToken = _spotify.getRefreshToken();
@@ -436,21 +468,16 @@ bool App::preformSpotifyAuthorization()
     _prefs.putString("spotrefresh", _config.spotifyRefreshToken);
     _prefs.end();
 
-    // if (refreshToken != NULL) {
-    //     request->send(200, "text/plain", refreshToken);
-    //     
-    // } else {
-    //     request->send(404, "text/plain", "Failed to load token, check serial monitor");
-    // }
-
     /* Cleanup server stuffs. */
     _server.end();
     MDNS.end();
 
+    printEnd("Spotify Authentication Process");
+
     return true;
 }
 
-bool App::refreshSpotify()
+bool Talos::refreshSpotify()
 {
     if (!_spotify.checkAndRefreshAccessToken()) return false;
 
@@ -463,7 +490,7 @@ bool App::refreshSpotify()
     return true;
 }
 
-void App::displayGeneral(Strings::Select severity, Strings::Select primary, Strings::Select secondary)
+void Talos::displayGeneral(Strings::Select severity, Strings::Select primary, Strings::Select secondary)
 {
     _slideGeneral.setSeverity(severity);
     _slideGeneral.setPrimary(primary);

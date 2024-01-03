@@ -6,6 +6,7 @@
 #include "SlideSpotify.h"
 
 namespace ts {
+
 static const uint8_t bayerThresholdMap [4][4] = {
     {15, 135, 45, 165},
     {195, 75, 225, 105},
@@ -15,7 +16,7 @@ static const uint8_t bayerThresholdMap [4][4] = {
 
 static int JPEGDraw(JPEGDRAW *pDraw)
 {
-    TS_INFO("Drawing image!\n");
+    log_i("Drawing image!\n");
 
     bool dither = true;
     int16_t x = pDraw->x;
@@ -96,12 +97,9 @@ static int JPEGDraw(JPEGDRAW *pDraw)
 } /* JPEGDraw() */
 
 
-SlideSpotify::SlideSpotify(WiFiClientSecure& wifiClient, SpotifyESP& spotify, char* imageBuffer)
+SlideSpotify::SlideSpotify(WiFiClientSecure& wifiClient, SpotifyESP& spotify)
     : _wifiClient(wifiClient)
     , _spotify(spotify)
-    , imageBuffer(imageBuffer)
-    , _title()
-    , _artist()
 {
 }
 
@@ -109,7 +107,7 @@ bool SlideSpotify::fetch(Render& render)
 {
 
     /* Spotifys API requires us to generate a token before other requests. */
-    TS_INFO("Requesting Spotify access token\n");
+    log_i("Requesting Spotify access token\n");
     
     char imageURL[SPOTIFY_URL_CHAR_LENGTH];
     auto onCurrentyPlaying = [&](SpotifyCurrentlyPlaying currentlyPlaying){
@@ -183,10 +181,10 @@ void SlideSpotify::render(Render& render)
     const int16_t smallFont = 56;
 
 
-    TS_INFO("Creting a JPEG description!\n");
+    log_i("Creting a JPEG description!\n");
     JPEGDEC* dec = new JPEGDEC();
     
-    TS_INFOF("Bitmap: %p\n", render.getBitmap());
+    log_i("Bitmap: %p\n", render.getBitmap());
     
     dec->setUserPointer(render.getBitmap());
     dec->setPixelType(ONE_BIT_DITHERED);
@@ -196,20 +194,20 @@ void SlideSpotify::render(Render& render)
     log_i("Opening JPEG, Pointer: %p, Length %d \n", _image, _imageLength);
     if (!dec->openRAM(_image, _imageLength, JPEGDraw))
     {
-        TS_ERROR("Could not open JPEGDEC from memory!\n");
+        log_e("Could not open JPEGDEC from memory!\n");
     }
 
     //dec->open()    
     
     dec->setUserPointer(render.getBitmap());
     
-    TS_INFO("Decoding jpeg image!\n");
+    log_i("Decoding jpeg image!\n");
     if (!dec->decode(400, 75, 0))
     {
-        TS_ERROR("Could not decode JPEGDEC image!\n");
+        log_e("Could not decode JPEGDEC image!\n");
     }
     
-    TS_INFO("Decoded JPEG image!\n");
+    log_i("Decoded JPEG image!\n");
 
     render
         .setAlignment(RenderAlign::eBottomLeft)

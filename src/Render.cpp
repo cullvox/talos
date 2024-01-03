@@ -116,6 +116,17 @@ Render& Render::drawRect(Rect2i rect)
 {
     assert(_bitmap && "Bitmap must be set before drawing!");
 
+    
+
+    return *this;
+}
+
+Render& Render::drawRoundedRect(Rect2i rect, int radius)
+{
+    assert(_bitmap && "Bitmap must be set before drawing!");
+
+
+
     return *this;
 }
 

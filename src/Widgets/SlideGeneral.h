@@ -1,11 +1,11 @@
 #pragma once
 
 #include "FlashStrings.h"
-#include "Slide.h"
+#include "Widget.h"
 
 namespace ts {
 
-class SlideGeneral : public Slide {
+class SlideGeneral : public Widget {
 public:
     virtual void render(Render& ofr) override;
 

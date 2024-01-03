@@ -5,7 +5,7 @@
 #include <SPI.h>
 
 #include "Vector.h"
-#include "Pins.h"
+#include "Config.h"
 
 namespace ts {
 
@@ -43,4 +43,4 @@ private:
     SPIClass*   _pSpi;
 };
 
-} // namespace ts
+} /* namespace ts */

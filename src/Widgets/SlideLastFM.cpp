@@ -5,9 +5,6 @@
 
 #include "SlideLastFM.h"
 #include "Print.h"
-#include "Secrets.h"
-
-
 
 namespace ts {
 
@@ -20,7 +17,7 @@ static const uint8_t bayerThresholdMap [4][4] = {
 
 static int JPEGDraw(JPEGDRAW *pDraw)
 {
-    TS_INFO("Drawing image!\n");
+    log_i("Drawing image!\n");
 
     bool dither = true;
     int16_t x = pDraw->x;
@@ -100,14 +97,14 @@ static int JPEGDraw(JPEGDRAW *pDraw)
 
 bool SlideLastFM::fetch(Render& render)
 {
-    TS_INFO("Fetching LastFM HTTP GET Request\n");
+    log_i("Fetching LastFM HTTP GET Request\n");
 
     #define TALOS_LASTFM_URL "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&limit=1&format=json&user=" TS_SECRET_LASTFM_USER "&api_key=" TS_SECRET_LASTFM_KEY
 
     HTTPClient http;
     if (!http.begin(TALOS_LASTFM_URL))
     {
-        TS_ERROR("http Failed!\n");
+        log_e("http Failed!\n");
         return false;
     }
 
@@ -118,12 +115,12 @@ bool SlideLastFM::fetch(Render& render)
     int httpResponseCode = http.GET();
     
     if (httpResponseCode > 0) {
-        TS_INFOF("HTTP Response code: %d\n", httpResponseCode);
+        log_i("HTTP Response code: %d\n", httpResponseCode);
         payload = http.getString();
-        TS_INFOF("%s\n", payload.c_str());
+        log_i("%s\n", payload.c_str());
     }
     else {
-        TS_ERRORF("Error code: %d\n", httpResponseCode);
+        log_e("Error code: %d\n", httpResponseCode);
         return false;
     }
     
@@ -138,9 +135,9 @@ bool SlideLastFM::fetch(Render& render)
     _track = json["recenttracks"]["track"][0]["name"].as<String>();
     String imageURL = json["recenttracks"]["track"][0]["image"][1]["#text"].as<String>();
 
-    TS_INFOF("Latest Artist: %s\n", _artist.c_str());
-    TS_INFOF("Latest Album: %s\n", _album.c_str());
-    TS_INFOF("Latest Tracks: %s\n", _track.c_str());
+    log_i("Latest Artist: %s\n", _artist.c_str());
+    log_i("Latest Album: %s\n", _album.c_str());
+    log_i("Latest Tracks: %s\n", _track.c_str());
 
     if (_track.length() > 16)
     {
@@ -152,59 +149,6 @@ bool SlideLastFM::fetch(Render& render)
     nowplaying.toLowerCase();
 
     _currentlyListening = nowplaying == "true" ? true : false;
-
-    imageURL = "http" + imageURL.substring(5);
-
-    if (!http.begin(imageURL))
-    {
-        TS_ERROR("http Failed!\n");
-        return false;
-    }
-
-    http.addHeader("Connection", "close");
-
-    // Send HTTP GET request
-    httpResponseCode = http.GET();
-    
-    if (httpResponseCode > 0) {
-        printf("HTTP Response code: %d\n", httpResponseCode);
-        
-        payload = http.getString();
-        
-        TS_ERRORF("%s\n", payload.c_str());
-    }
-    else {
-        printf("Error code: %d", httpResponseCode);
-        return false;
-    }
-    
-    // Free resources
-    http.end();
-
-
-    TS_INFO("Creting a JPEG description!\n");
-    JPEGDEC* dec = new JPEGDEC();
-
-    TS_INFOF("Bitmap: %p\n", render.getBitmap());
-
-    dec->setUserPointer(render.getBitmap());
-    dec->setPixelType(ONE_BIT_DITHERED);
-
-    TS_INFO("Opening JPEG flash\n");
-    if (!dec->openRAM((uint8_t*)payload.c_str(), payload.length(), JPEGDraw))
-    {
-        TS_ERROR("Could not open JPEGDEC from memory!\n");
-    }    
-
-    dec->setUserPointer(render.getBitmap());
-
-    TS_INFO("Decoding jpeg image!\n");
-    if (!dec->decode(0, 0, 0))
-    {
-        TS_ERROR("Could not decode JPEGDEC image!\n");
-    }
-
-    TS_INFO("Decoded JPEG image!\n");
 
     return true;
 }
@@ -235,8 +179,6 @@ void SlideLastFM::render(Render& render)
         .drawText(_artist.c_str()); 
 
 }
-
-
 
 } /* namespace ts */
 

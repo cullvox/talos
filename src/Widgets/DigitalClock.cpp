@@ -24,12 +24,12 @@ bool SlideDigitalClock::fetch(Render&)
     int responseCode = http.GET();
     
     if (responseCode > 0) { /* Successful response, get the content of the response. */
-        TS_INFOF("HTTP Response code: %d\n", responseCode);
+        log_i("HTTP Response code: %d\n", responseCode);
         payload = http.getString();
-        TS_INFOF("%s\n", payload.c_str());
+        log_i("%s\n", payload.c_str());
     }
     else { /* Unsuccessful response from the http client. */        
-        TS_ERRORF("Error code: %d", responseCode);
+        log_e("Error code: %d", responseCode);
         return false;
     }
     

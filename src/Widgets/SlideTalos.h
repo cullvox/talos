@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Slide.h"
+#include "Widget.h"
 
 namespace ts {
 
-class SlideTalos : public Slide {
+class SlideTalos : public Widget {
 public:
     virtual void render(Render&) override;
 };

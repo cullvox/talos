@@ -1,23 +1,21 @@
 #pragma once
 
-#include "Slide.h"
+#include "Widget.h"
 #include "SpotifyESP.h"
 
 namespace ts {
 
-class SlideSpotify : public Slide {
+class WidgetSpotify : public Widget {
 public:
-    SlideSpotify(WiFiClientSecure& wifiClient, SpotifyESP& _spotify, char* imageBuffer);
+    WidgetSpotify(WiFiClientSecure& wifiClient, SpotifyESP& _spotify);
 
-    virtual const char* name() { return "SpotifySlide"; }
     virtual bool fetch(Render& render) override;
-    // virtual void overlay(Render& render) override;
+
     virtual void render(Render& render) override;
 
 private:
     WiFiClientSecure& _wifiClient;
-    SpotifyESP& _spotify;
-    char* imageBuffer;
+    SpotifyESP* _spotify;
     Strings::Select _currentlyPlaying;
     size_t _imageLength;    
     uint8_t* _image = nullptr;
@@ -25,5 +23,3 @@ private:
     char _artist[SPOTIFY_NAME_CHAR_LENGTH];
     
 };
-
-}

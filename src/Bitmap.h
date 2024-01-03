@@ -1,9 +1,7 @@
 #pragma once
 
-#include "Result.h"
 #include "Vector.h"
 #include "Rect.h"
-#include "Prone.h"
 
 namespace ts {
 
@@ -85,7 +83,7 @@ private:
 };
 
 /** @brief Normal allocating bitmap, fails on allocation failure. */
-class BitmapAlloc : public BitmapInterface, public Prone {
+class BitmapAlloc : public BitmapInterface {
 public:
 
     /** @brief Default constructor. */
@@ -111,12 +109,10 @@ public:
     /** @brief Moves the bitmap. */
     BitmapAlloc& operator=(BitmapAlloc&& rhs);
 
+    bool bad() const { return !_data; }
     virtual Extent2i extent() const override { return _extent; }
     virtual uint8_t* data() override { return _data; }
     virtual const uint8_t* data() const override { return _data; }
-
-    /** @brief Construction result value. */
-    Result what() const { return _what; };
 
 private:
     Extent2i _extent;

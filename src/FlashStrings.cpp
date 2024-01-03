@@ -1,8 +1,9 @@
 #include <pgmspace.h>
 #include <string.h>
 
-#include "Version.h"
-#include "Print.h"
+#include <Arduino.h>
+
+#include "Config.h"
 #include "FlashStrings.h"
 
 
@@ -24,11 +25,11 @@ TS_PROGMEM_STR(SetupJoinWifi, "To start join TALOS_##'s WiFi on your device");
 TS_PROGMEM_STR(SetupAlmostDone, "You're almost done");
 TS_PROGMEM_STR(SetupSpotToContinue, "To continue go to talos.local/spotify to authenticate."); 
 
-TS_PROGMEM_STR(Loading0, "Warming Up Machines...");
-TS_PROGMEM_STR(Loading1, "Thinking...");
-TS_PROGMEM_STR(Loading2, "Computing, uh, Numbers...");
-TS_PROGMEM_STR(Loading3, "Finding Nirmata..."); /* The Creator */
-TS_PROGMEM_STR(Loading4, "Making Computer Sauces...");
+TS_PROGMEM_STR(Loading0, "warming up machines...");
+TS_PROGMEM_STR(Loading1, "thinking...");
+TS_PROGMEM_STR(Loading2, "crunching numbers...");
+TS_PROGMEM_STR(Loading3, "finding nirmata..."); /* The Creator */
+TS_PROGMEM_STR(Loading4, "distributing sauces...");
 
 TS_PROGMEM_STR(SeverityError, "ERROR");
 TS_PROGMEM_STR(SeverityInfo, "INFO \uf259");
@@ -41,9 +42,9 @@ TS_PROGMEM_STR(ErrWifiSsidNotFound, "WiFi SSID Not Found");
 TS_PROGMEM_STR(ErrSpotAuthFailed, "Spotify authentication failed");
 
 /* Secondary */
-TS_PROGMEM_STR(SolWifiRecon, "Attempting to reconnect in 30 seconds");
-TS_PROGMEM_STR(SolReboot, "Rebooting in 30 seconds");
-TS_PROGMEM_STR(SolRestartFTS, "Restarting first time setup in a moment");
+TS_PROGMEM_STR(SolWifiRecon, "attempting to reconnect...");
+TS_PROGMEM_STR(SolReboot, "Rebooting...");
+TS_PROGMEM_STR(SolRestartFTS, "Restarting...");
 
 TS_PROGMEM_STR(PlaybackNowPlaying, "now playing");
 TS_PROGMEM_STR(PlaybackWasPlaying, "was playing");
@@ -90,7 +91,7 @@ void Strings::copyTo(Select select, char* buf, uint32_t bufMax)
         case ePlaybackWasPlaying: return progmem::PlaybackWasPlaying;
 
         default:
-            TS_ERROR("Invalid flashed string selection!");
+            log_e("Invalid flashed string selection!");
             return progmem::SeverityError;
         }
     }();

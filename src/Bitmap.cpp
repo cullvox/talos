@@ -106,7 +106,7 @@ BitmapAlloc::BitmapAlloc(Extent2i extent, bool usePsRam)
     if (usePsRam && !psramFound())
     {
         assert(false && "Cannot use PSRAM on system where it is not available!");
-        _what = Result::eInvalidArgumentError;
+        return;
     }
 
     if (usePsRam)
@@ -116,8 +116,7 @@ BitmapAlloc::BitmapAlloc(Extent2i extent, bool usePsRam)
 
     if (!_data) 
     {
-        log_e("Could not allocate memory!");
-        _what = Result::eOutOfMemoryError;
+        log_e("Could not allocate memory for bitmap!");
         return;
     }
 }
@@ -126,7 +125,7 @@ BitmapAlloc::BitmapAlloc(Extent2i extent, const uint8_t* buffer, bool usePsRam)
     : BitmapAlloc(extent, usePsRam)
 {  
     assert(buffer && "Bitmap buffer must be a valid pointer!");
-    if (_what) return; // Don't do anything on memory alloc failure.
+    if (bad()) return;
 
     memcpy(_data, buffer, _sizeBytes);
 }
@@ -153,4 +152,4 @@ BitmapAlloc& BitmapAlloc::operator=(BitmapAlloc&& rhs)
     return *this;
 }
 
-} // namespace talos
+} /* namespace talos */

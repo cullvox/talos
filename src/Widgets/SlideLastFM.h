@@ -3,7 +3,7 @@
 
 #include "JPEGDEC.h"
 
-#include "Slide.h"
+#include "Widget.h"
 
 
 namespace ts {

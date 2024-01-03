@@ -5,23 +5,28 @@
 #include <AsyncWebSocket.h>
 #include <SpotifyESP.h>
 
+#include "Config.h"
 #include "Bitmap.h"
 #include "Render.h"
 #include "Display.h"
-#include "slides/SlideGeneral.h"
+#include "Pages/Sandbox.h"
 
 namespace ts {
 
-class App {
+class Talos {
 public:
-    App();
+    Talos();
 
     bool init();
     bool run();
     void shutdown();
 
 private:
+    void printBegin(const char* name);
+    void printEnd(const char* name);
     void printStartup();
+    void readConfig();
+    void writeConfig();
     bool connectToWiFi();
     bool preformFirstTimeSetup();
     bool preformSpotifyAuthorization();
@@ -29,30 +34,16 @@ private:
     
     void displayGeneral(Strings::Select severity, Strings::Select primary, Strings::Select secondary);
 
-
+    bool _hasPsram;
     Preferences _prefs;
     Display _display;
     BitmapAlloc _buffer;
     Render _render;
-    SlideGeneral _slideGeneral;
+    PageSandbox _slideGeneral;
     AsyncWebServer _server;
     WiFiClientSecure _wifiClient;
     HTTPClient _httpClient;
     SpotifyESP _spotify;
-    char* spotifyImageBuffer;
-
-    struct Config {
-        bool isFirstTimeSetup;
-        bool isWifiEnterprise;
-        char wifiSSID[64+1];
-        char wifiUsername[64+1];
-        char wifiIdentity[64+1];
-        char wifiPassword[32+1];
-        bool spotifyEnabled;
-        bool spotifyAuthorized;
-        String spotifyRefreshToken; 
-    };
-
     Config _config;
 };
 

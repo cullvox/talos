@@ -65,6 +65,7 @@ public:
     Render& setPixel(Vector2i pos, Color color);
     Render& drawLine(Rect2i rect);
     Render& drawRect(Rect2i rect);
+    Render& drawRoundedRect(Extent2i rect, int radius);
     Render& drawCircle(uint16_t radius);
     Render& drawText(const char* text);
     Render& drawTextFormat(const char* format, ...);
