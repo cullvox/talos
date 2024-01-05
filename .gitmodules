@@ -1,3 +1,0 @@
-[submodule "lib/spotify-esp"]
-	path = lib/spotify-esp
-	url = https://github.com/cadenmiller/spotify-esp
