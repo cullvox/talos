@@ -125,7 +125,22 @@ Render& Render::drawRoundedRect(Rect2i rect, int radius)
 {
     assert(_bitmap && "Bitmap must be set before drawing!");
 
+    int16_t max_radius = ((w < h) ? w : h) / 2; // 1/2 minor axis
+    if (r > max_radius)
+        r = max_radius;
 
+
+    // smarter version
+    drawLine(x + r, y, w - 2 * r, color);         // Top
+    drawLine(x + r, y + h - 1, w - 2 * r, color); // Bottom
+    drawLine(x, y + r, h - 2 * r, color);         // Left
+    drawLine(x + w - 1, y + r, h - 2 * r, color); // Right
+    
+    // draw four corners
+    drawCircleHelper(x + r, y + r, r, 1, color);
+    drawCircleHelper(x + w - r - 1, y + r, r, 2, color);
+    drawCircleHelper(x + w - r - 1, y + h - r - 1, r, 4, color);
+    drawCircleHelper(x + r, y + h - r - 1, r, 8, color);
 
     return *this;
 }
@@ -133,6 +148,8 @@ Render& Render::drawRoundedRect(Rect2i rect, int radius)
 Render& Render::drawCircle(uint16_t radius)
 {
     assert(_bitmap && "Bitmap must be set before drawing!");
+
+
 
     return *this;
 }

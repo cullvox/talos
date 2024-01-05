@@ -63,13 +63,19 @@ public:
     Render& seekCursor(Vector2i deltaPos);
 
     Render& setPixel(Vector2i pos, Color color);
+    Render& drawHLine(int x, int y, int length);
+    Render& drawHLine(int x, int y, int length);
     Render& drawLine(Rect2i rect);
     Render& drawRect(Rect2i rect);
     Render& drawRoundedRect(Extent2i rect, int radius);
     Render& drawCircle(uint16_t radius);
+    Render& drawArc(float cx, float cy, float px, float py, float theta, int N);
+
+
     Render& drawText(const char* text);
     Render& drawTextFormat(const char* format, ...);
     Render& drawTextFromFlash(Strings::Select selection);
+
 
     //Render& drawJpeg(Vector2i pos, const uint8_t* data, size_t length);
 

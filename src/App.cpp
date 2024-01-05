@@ -190,17 +190,11 @@ void Talos::writeConfig()
 class CaptiveRequestHandler : public AsyncWebHandler
 {
 public:
-    CaptiveRequestHandler() {}
-    virtual ~CaptiveRequestHandler() {}
-    bool canHandle(AsyncWebServerRequest *request)
-    {
+    bool canHandle(AsyncWebServerRequest *request) {
         request->addInterestingHeader("ANY");
         return true;
     }
-    void handleRequest(AsyncWebServerRequest *request)
-    {
-        
-
+    void handleRequest(AsyncWebServerRequest *request) {
         if (request->method() == HTTP_GET &&
             request->url() == "/css/pico.min.css") {
             log_i("Sending /css/pico.min.css");

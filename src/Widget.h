@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Preferences.h>
+#include <WiFiClientSecure.h>
 
 #include "Render.h"
 
@@ -27,7 +27,7 @@ public:
      */
     virtual void render(Render& render);
 
-    virtual bool fetch(Render& render) { return true; }
+    virtual bool fetch(WifiClientSecure& client) { return true; }
 };
 
 } /* namespace ts */

@@ -3,6 +3,23 @@
 #define TS_STRINGIFY(a) TS_XSTRINGIFY(a)
 #define TS_XSTRINGIFY(a) #a
 
+
+// ======================================
+// TALOS VERSION
+// ======================================
+
+#define TALOS_VERSION_TAG "beta"
+#define TALOS_VERSION_MAJOR 0
+#define TALOS_VERSION_MINOR 7
+#define TALOS_VERSION_PATCH 0
+
+#define TALOS_VERSION_STRING TALOS_VERSION_TAG "-v" TS_STRINGIFY(TALOS_VERSION_MAJOR) "." TS_STRINGIFY(TALOS_VERSION_MINOR) "." TS_STRINGIFY(TALOS_VERSION_PATCH)
+#define TALOS_VERSION_CODE (uint32_t)(TALOS_VERSION_TAG[0]) << 24 | \
+                            (uint32_t)(TALOS_VERSION_MAJOR) << 16 | \
+                            (uint32_t)(TALOS_VERSION_MINOR) << 8 | \
+                            (uint32_t)(TALOS_VERSION_PATCH);
+
+/* Any git info is gathered at pre-build time. */
 #ifndef TALOS_VERSION_GIT_TAG
 #define TALOS_VERSION_GIT_TAG ""
 #endif
@@ -15,17 +32,11 @@
 #define TALOS_VERSION_GIT_HASH_SHORT ""
 #endif
 
-#define TALOS_VERSION_TAG "beta"
-#define TALOS_VERSION_MAJOR 0
-#define TALOS_VERSION_MINOR 7
-#define TALOS_VERSION_PATCH 0
+#define TALOS_VERSION_STRING_GIT TALOS_VERSION_GIT_TAG " " TALOS_VERSION_GIT_HASH_SHORT
 
-#define TALOS_VERSION_CODE (uint32_t)(TALOS_VERSION_TAG[0]) << 24 | \
-                            (uint32_t)(TALOS_VERSION_MAJOR) << 16 | \
-                            (uint32_t)(TALOS_VERSION_MINOR) << 8 | \
-                            (uint32_t)(TALOS_VERSION_PATCH);
-
-#define TALOS_VERSION_STRING TALOS_VERSION_GIT_TAG " " TALOS_VERSION_GIT_HASH_SHORT
+// ======================================
+// TALOS CONFIG
+// ======================================
 
 #define TS_HOSTNAME "talos"
 #define TS_MAX_WIFI_CONNECTION_TIMEOUT 30
