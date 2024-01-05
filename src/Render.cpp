@@ -105,6 +105,26 @@ Render& Render::setPixel(Vector2i pos, Color color)
     return *this;
 }
 
+Render& Render::drawVLine(int x, int y, int length)
+{
+    assert(_bitmap && "Bitmap must be set before drawing!");
+
+    for (int32_t i = y; i < i + y; i++)
+        setPixel({(int16_t)x, (int16_t)i}, Color::eBlack);
+
+    return *this;
+}
+
+Render& Render::drawHLine(int x, int y, int length)
+{
+    assert(_bitmap && "Bitmap must be set before drawing!");
+
+    for (int32_t i = x; i < i + x; i++)
+        setPixel({(int16_t)i, (int16_t)y}, Color::eBlack);
+
+    return *this;
+}
+
 Render& Render::drawLine(Rect2i rect)
 {
     assert(_bitmap && "Bitmap must be set before drawing!");
@@ -121,7 +141,7 @@ Render& Render::drawRect(Rect2i rect)
     return *this;
 }
 
-Render& Render::drawRoundedRect(Rect2i rect, int radius)
+Render& Render::drawRoundedRect(int x, int y, int r)
 {
     assert(_bitmap && "Bitmap must be set before drawing!");
 
@@ -131,10 +151,10 @@ Render& Render::drawRoundedRect(Rect2i rect, int radius)
 
 
     // smarter version
-    drawLine(x + r, y, w - 2 * r, color);         // Top
-    drawLine(x + r, y + h - 1, w - 2 * r, color); // Bottom
-    drawLine(x, y + r, h - 2 * r, color);         // Left
-    drawLine(x + w - 1, y + r, h - 2 * r, color); // Right
+    drawHLine(x + r, y, w - 2 * r);         // Top
+    drawHLine(x + r, y + h - 1, w - 2 * r); // Bottom
+    drawVLine(x, y + r, h - 2 * r);         // Left
+    drawVLine(x + w - 1, y + r, h - 2 * r); // Right
     
     // draw four corners
     drawCircleHelper(x + r, y + r, r, 1, color);

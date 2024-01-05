@@ -4,10 +4,9 @@
 
 namespace ts {
 
-class SlideDigitalClock : public Slide {
+class WidgetDigitalClock : public Widget {
 public:
-    virtual const char* name() override { return "DigitalClock"; }
-    virtual bool fetch(Render& render) override;
+    virtual bool fetch(WiFiClientSecure& client) override;
     virtual void render(Render& render) override;
 
 protected:

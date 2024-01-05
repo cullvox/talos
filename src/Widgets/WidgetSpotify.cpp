@@ -1,9 +1,7 @@
-#include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <JPEGDEC.h>
 
-#include "JPEGDEC.h"
-#include "Secrets.h"
-#include "SlideSpotify.h"
+#include "WidgetSpotify.h"
 
 namespace ts {
 
@@ -97,45 +95,29 @@ static int JPEGDraw(JPEGDRAW *pDraw)
 } /* JPEGDraw() */
 
 
-SlideSpotify::SlideSpotify(WiFiClientSecure& wifiClient, SpotifyESP& spotify)
-    : _wifiClient(wifiClient)
+WidgetSpotify::WidgetSpotify(SpotifyESP& spotify)
     , _spotify(spotify)
 {
 }
 
-bool SlideSpotify::fetch(Render& render)
+bool WidgetSpotify::fetch(WiFiClientSecure& client)
 {
 
     /* Spotifys API requires us to generate a token before other requests. */
-    log_i("Requesting Spotify access token\n");
+    log_i("Requesting Spotify currently playing.");
     
     char imageURL[SPOTIFY_URL_CHAR_LENGTH];
     auto onCurrentyPlaying = [&](SpotifyCurrentlyPlaying currentlyPlaying){
-
         log_i("Track name: %s", currentlyPlaying.trackName);
         log_i("Artist name: %s", currentlyPlaying.artists[0].artistName);
+
         strncpy(_title, currentlyPlaying.trackName, SPOTIFY_NAME_CHAR_LENGTH);
         strncpy(_artist, currentlyPlaying.artists[0].artistName, SPOTIFY_NAME_CHAR_LENGTH);
-
-        /* Get the closest to 300x300*/
-        //int smallest = 0;
-        //int smallestWidth = currentlyPlaying.albumImages[0].width;
-
-        // for (int i = 0; i < currentlyPlaying.numImages; i++)
-        // {
-        //     if (currentlyPlaying.albumImages[i].width < smallestWidth) 
-        //     {
-        //         smallestWidth = currentlyPlaying.albumImages[i].width;
-        //         smallest = i;
-        //     }
-        // }
-
-
         strncpy(imageURL, currentlyPlaying.albumImages[/* smallest */ 1].url, SPOTIFY_URL_CHAR_LENGTH);
-
     };
 
-    _spotify.getCurrentlyPlayingTrack(onCurrentyPlaying, "US");
+    _wifiClient.setCACert(SpotifyCert::server);
+    _spotify->getCurrentlyPlayingTrack(onCurrentyPlaying, "US");
 
     yield();
 
@@ -143,13 +125,11 @@ bool SlideSpotify::fetch(Render& render)
     log_i("Track: %s", _title);
 
 #ifdef TALOS_SUPPORT_SPOTIFY_IMAGES
-
-    _wifiClient.setCACert(SpotifyCert::imageServer);
-    _wifiClient.setInsecure();
+    wifiClient.setInsecure();
 
     log_i("Memory before gathering image: %d", ESP.getFreeHeap());
 
-    if (!_spotify.requestImage(imageURL, &_imageLength)) {
+    if (!_spotify->requestImage(imageURL, &_imageLength)) {
         log_e("Could not request an image!");
         return true;
     }
@@ -161,20 +141,14 @@ bool SlideSpotify::fetch(Render& render)
         return true;
     }
 
-    if (!_spotify.getImage(_image))
+    if (!_spotify->getImage(_image))
         log_e("Could not get a Spotify image, not displaying.");
 #endif
 
     return true;
 }
 
-int32_t STREAM_JPEG_READ_CALLBACK(JPEGFILE *pFile, uint8_t *pBuf, int32_t iLen);
-int32_t STREAM_JPEG_SEEK_CALLBACK(JPEGFILE *pFile, int32_t iPosition);
-int STREAM_JPEG_DRAW_CALLBACK(JPEGDRAW *pDraw);
-void * STREAM_JPEG_OPEN_CALLBACK(const char *szFilename, int32_t *pFileSize);
-void STREAM_JPEG_CLOSE_CALLBACK(void *pHandle);
-
-void SlideSpotify::render(Render& render)
+void WidgetSpotify::render(Render& render)
 {
     const int16_t titleY = 480/2;
     const int16_t largeFont = 96;

@@ -12,7 +12,8 @@
 #include <ESPNtpClient.h>
 
 #include "Config.h"
-#include "slides/SlideSpotify.h"
+#include "Pages/Sandbox.h"
+#include "Widgets/WidgetSpotify.h"
 #include "App.h"
 
 namespace ts {
@@ -110,11 +111,11 @@ bool Talos::init()
     }
 
     /* Display the splash page. */
-    SlideSpotify slideSpotify(_wifiClient, _spotify);
-    slideSpotify.fetch(_render);
+    WidgetSpotify spotifyWidget{_wifiClient, _spotify};
+
 
     _buffer.clear();
-    slideSpotify.render(_render);
+    spotifyWidget.render(_render);
     _display.present(_buffer.data());
 
     printEnd("Initializing Devices");

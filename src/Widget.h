@@ -27,7 +27,7 @@ public:
      */
     virtual void render(Render& render);
 
-    virtual bool fetch(WifiClientSecure& client) { return true; }
+    virtual bool fetch(WiFiClientSecure& client) { return true; }
 };
 
 } /* namespace ts */

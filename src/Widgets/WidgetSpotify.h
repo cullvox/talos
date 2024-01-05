@@ -7,10 +7,10 @@ namespace ts {
 
 class WidgetSpotify : public Widget {
 public:
-    WidgetSpotify(WiFiClientSecure& wifiClient, SpotifyESP& _spotify);
+    WidgetSpotify(SpotifyESP& spotify);
 
-    virtual bool fetch(Render& render) override;
-
+    virtual Extent2i getExtent() const override { return { 750, 300 }; }
+    virtual bool fetch(WiFiClientSecure& client) override;
     virtual void render(Render& render) override;
 
 private:
@@ -21,5 +21,6 @@ private:
     uint8_t* _image = nullptr;
     char _title[SPOTIFY_NAME_CHAR_LENGTH];
     char _artist[SPOTIFY_NAME_CHAR_LENGTH];
-    
 };
+
+} /* namespace ts */

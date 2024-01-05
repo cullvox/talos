@@ -63,7 +63,7 @@ public:
     Render& seekCursor(Vector2i deltaPos);
 
     Render& setPixel(Vector2i pos, Color color);
-    Render& drawHLine(int x, int y, int length);
+    Render& drawVLine(int x, int y, int length);
     Render& drawHLine(int x, int y, int length);
     Render& drawLine(Rect2i rect);
     Render& drawRect(Rect2i rect);

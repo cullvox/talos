@@ -1,13 +1,13 @@
 #pragma once
 
 #include "FlashStrings.h"
-#include "Widget.h"
+#include "Page.h"
 
 namespace ts {
 
-class SlideGeneral : public Widget {
+class PageGeneral : public Page {
 public:
-    virtual void render(Render& ofr) override;
+    virtual void render(Render& render) override;
 
     void setSeverity(Strings::Select index);
     void setPrimary(Strings::Select index);

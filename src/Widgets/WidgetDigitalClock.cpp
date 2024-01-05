@@ -2,7 +2,7 @@
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 
-#include "SlideDigitalClock.h"
+#include "WidgetDigitalClock.h"
 
 namespace ts {
 

@@ -1,4 +1,4 @@
-#include "SlideTalos.h"
+#include "PageTalos.h"
 #include "FlashStrings.h"
 
 namespace ts {

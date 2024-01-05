@@ -1,4 +1,4 @@
-#include "SlideGeneral.h"
+#include "PageGeneral.h"
 
 namespace ts {
 
