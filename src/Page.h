@@ -3,6 +3,8 @@
 #include <WiFiClientSecure.h>
 #include "Render.h"
 
+namespace ts {
+
 /** @brief A page is a collection of widgets rendered. */
 class Page {
 public:
@@ -40,3 +42,5 @@ public:
         { return true; }
 
 };
+
+} /* namespace ts */

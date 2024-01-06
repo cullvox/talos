@@ -35,15 +35,19 @@ bool Talos::init()
     printBegin("Initializing Devices");
     printStartup();
 
+    /* Setup the first-time-setup interrupt pin. */
+    pinMode(TS_PIN_FIRST_TIME_SETUP, INPUT_PULLUP);
+    attachInterrupt(TS_PIN_FIRST_TIME_SETUP, Talos::interruptClear, FALLING);
+
     /* PSRAM is very useful for the Spotify image API and other web things.
         Without it some things have to be cut out... (Spotify album art) */
     log_v("Checking for PSRAM...");
 
     if (psramInit()) {
-        _hasPsram = true;
+        _bHasPsram = true;
         log_v("PSRAM has been initialized");
     } else {
-        _hasPsram = false;
+        _bHasPsram = false;
         log_i("PSRAM is not initialized");
     }
 
@@ -56,14 +60,16 @@ bool Talos::init()
         log_v("Mounted.");
     }
 
-    _buffer = BitmapAlloc(_display.extent(), _hasPsram);
+    log_i("Is font file found: %d", SPIFFS.exists("/fonts/talos.ttf"));
+
+    _buffer = BitmapAlloc(_display.extent(), _bHasPsram);
 
     /* Initialize the display and graphics operations. */
     _render.setBitmap(_buffer);
     ffsupport_setffs(SPIFFS);
 
     log_v("Loading TALOS font...");
-    if (!_render.loadFont("/fonts/faxnrxwi.ttf"))
+    if (!_render.loadFont("/fonts/talos.ttf"))
     {
         log_e("Could not load the icons font!");
         return false; /* The font must be loaded in order to operate TALOS. */
@@ -79,7 +85,18 @@ bool Talos::init()
         return false; /* The display is required to be initialized properly. */
     }
 
+
+    File siegeFile = SPIFFS.open("/siege.bin");
+
+    BitmapAlloc siegeBits{{419, 460}, true};
+    siegeFile.readBytes((char*)siegeBits.data(), siegeFile.size());
+
+    _buffer.clear();
+    _buffer.blit(siegeBits, {190, 10});
+    _display.present(_buffer.data());
+
     /* Read in the users configuration, if any. */
+doFTS:
     readConfig();
 
     if (_config.spotifyRefreshToken.isEmpty())
@@ -93,9 +110,11 @@ bool Talos::init()
         _prefs.end();
     }
 
-    /* Attempt to connect to the users Wi-Fi, on failure -- preform first time setup. */
+    /* Attempt to connect to the users Wi-Fi, on fail wait a little and try again. */
     if (!connectToWiFi()) {
-        preformFirstTimeSetup();
+        sleep(30);
+        ESP.restart();
+        return false;
     }
 
     /* Check if Spotify was correctly and fully authenticated. */
@@ -111,8 +130,9 @@ bool Talos::init()
     }
 
     /* Display the splash page. */
-    WidgetSpotify spotifyWidget{_wifiClient, _spotify};
+    WidgetSpotify spotifyWidget{_spotify};
 
+    spotifyWidget.fetch(_wifiClient);
 
     _buffer.clear();
     spotifyWidget.render(_render);
@@ -125,6 +145,13 @@ bool Talos::init()
 
 bool Talos::run()
 {
+
+    /* If the user pressed the reset button we will completely reset the device. */
+    if (_bReset) {
+        clearConfig();
+        ESP.restart();
+    }
+
     return true;
 }
 
@@ -179,13 +206,24 @@ void Talos::readConfig()
     log_v("config: spotrefresh = %s", _config.spotifyRefreshToken.c_str());
 
     // log_i("config: spotrefreshtime = %d")
-
     _prefs.end();
 }
 
 void Talos::writeConfig()
 {
 
+}
+
+void Talos::clearConfig()
+{
+    printBegin("Preform Full Wipe");
+    
+    Preferences prefs;
+    prefs.begin("talos");
+    prefs.clear();
+    prefs.end();
+    
+    printEnd("Preform Full Wipe");
 }
 
 class CaptiveRequestHandler : public AsyncWebHandler
@@ -336,8 +374,11 @@ bool Talos::preformFirstTimeSetup()
 {
     printBegin("First Time Setup");
 
+    /* Clear any previous configuration before first time setup.*/
+    clearConfig();
+
     /* Start the access point. */
-    String pass = "ABC1234567";
+    String pass = TS_SECRET_FIRST_TIME_SETUP_PASSWORD;
     String ssid = F("TALOS_");
     ssid.concat(WiFi.macAddress().substring(3, 5));
 
@@ -493,6 +534,12 @@ void Talos::displayGeneral(Strings::Select severity, Strings::Select primary, St
     _buffer.clear();
     _slideGeneral.render(_render);
     _display.present(_buffer.data());
+}
+
+void Talos::interruptClear()
+{
+    clearConfig();
+    ESP.restart();
 }
 
 } /* namespace ts */

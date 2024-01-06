@@ -9,7 +9,7 @@
 #include "Bitmap.h"
 #include "Render.h"
 #include "Display.h"
-#include "Pages/Sandbox.h"
+#include "Pages/PageGeneral.h"
 
 namespace ts {
 
@@ -22,24 +22,29 @@ public:
     void shutdown();
 
 private:
-    void printBegin(const char* name);
-    void printEnd(const char* name);
-    void printStartup();
+    static void printBegin(const char* name);
+    static void printEnd(const char* name);
+    static void printStartup();
     void readConfig();
     void writeConfig();
+    static void clearConfig();
     bool connectToWiFi();
     bool preformFirstTimeSetup();
     bool preformSpotifyAuthorization();
     bool refreshSpotify();
-    
+
+    /** @brief Clears the configuration and restarts the device. */
+    static void interruptClear();
+
     void displayGeneral(Strings::Select severity, Strings::Select primary, Strings::Select secondary);
 
-    bool _hasPsram;
+    bool _bHasPsram;
+    bool _bReset;
     Preferences _prefs;
     Display _display;
     BitmapAlloc _buffer;
     Render _render;
-    PageSandbox _slideGeneral;
+    PageGeneral _slideGeneral;
     AsyncWebServer _server;
     WiFiClientSecure _wifiClient;
     HTTPClient _httpClient;

@@ -2,9 +2,9 @@
 #include <ArduinoJson.h>
 #include <StreamString.h>
 #include <HTTPClient.h>
+#include <JPEGDEC.h>
 
-#include "SlideLastFM.h"
-#include "Print.h"
+#include "WidgetLastFM.h"
 
 namespace ts {
 
@@ -95,14 +95,14 @@ static int JPEGDraw(JPEGDRAW *pDraw)
     return 1;
 } /* JPEGDraw() */
 
-bool SlideLastFM::fetch(Render& render)
+bool WidgetLastFM::fetch(WiFiClientSecure& client)
 {
     log_i("Fetching LastFM HTTP GET Request\n");
 
-    #define TALOS_LASTFM_URL "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&limit=1&format=json&user=" TS_SECRET_LASTFM_USER "&api_key=" TS_SECRET_LASTFM_KEY
+    // #define TALOS_LASTFM_URL "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&limit=1&format=json&user=" TS_SECRET_LASTFM_USER "&api_key=" TS_SECRET_LASTFM_KEY
 
     HTTPClient http;
-    if (!http.begin(TALOS_LASTFM_URL))
+    // if (!http.begin(TALOS_LASTFM_URL))
     {
         log_e("http Failed!\n");
         return false;
@@ -153,7 +153,7 @@ bool SlideLastFM::fetch(Render& render)
     return true;
 }
 
-void SlideLastFM::render(Render& render)
+void WidgetLastFM::render(Render& render)
 {
     Strings::Select playingSelect = _currentlyListening ? Strings::ePlaybackNowPlaying : Strings::ePlaybackWasPlaying; 
     

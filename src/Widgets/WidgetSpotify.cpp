@@ -96,7 +96,7 @@ static int JPEGDraw(JPEGDRAW *pDraw)
 
 
 WidgetSpotify::WidgetSpotify(SpotifyESP& spotify)
-    , _spotify(spotify)
+    : _spotify(&spotify)
 {
 }
 
@@ -116,7 +116,7 @@ bool WidgetSpotify::fetch(WiFiClientSecure& client)
         strncpy(imageURL, currentlyPlaying.albumImages[/* smallest */ 1].url, SPOTIFY_URL_CHAR_LENGTH);
     };
 
-    _wifiClient.setCACert(SpotifyCert::server);
+    client.setCACert(SpotifyCert::server);
     _spotify->getCurrentlyPlayingTrack(onCurrentyPlaying, "US");
 
     yield();
@@ -125,7 +125,7 @@ bool WidgetSpotify::fetch(WiFiClientSecure& client)
     log_i("Track: %s", _title);
 
 #ifdef TALOS_SUPPORT_SPOTIFY_IMAGES
-    wifiClient.setInsecure();
+    client.setInsecure();
 
     log_i("Memory before gathering image: %d", ESP.getFreeHeap());
 

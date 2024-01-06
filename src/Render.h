@@ -47,6 +47,7 @@ public:
 
     Render& setBitmap(BitmapInterface& bitmap);
     Render& setCursor(Vector2i pos);
+    Render& seekCursor(Vector2i deltaPos);
     Render& setAlignment(RenderAlign align);
     Render& setFillColor(Color color);
     Render& setOutlineColor(Color color);
@@ -60,15 +61,16 @@ public:
     uint16_t getOutlineThickness();
     BitmapInterface* getBitmap();
 
-    Render& seekCursor(Vector2i deltaPos);
+    
 
     Render& setPixel(Vector2i pos, Color color);
     Render& drawVLine(int x, int y, int length);
     Render& drawHLine(int x, int y, int length);
     Render& drawLine(Rect2i rect);
     Render& drawRect(Rect2i rect);
-    Render& drawRoundedRect(Extent2i rect, int radius);
+    Render& drawCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cornername);
     Render& drawCircle(uint16_t radius);
+    Render& drawRoundedRect(int x, int y, int w, int h, int r);
     Render& drawArc(float cx, float cy, float px, float py, float theta, int N);
 
 

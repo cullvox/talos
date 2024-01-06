@@ -6,7 +6,7 @@
 
 namespace ts {
 
-bool SlideDigitalClock::fetch(Render&)
+bool WidgetDigitalClock::fetch(WiFiClientSecure& client)
 {
 
     /* Setup an http client for "worldtimeapi.org" to easily get the time. */
@@ -57,7 +57,7 @@ bool SlideDigitalClock::fetch(Render&)
     return true;
 }
 
-void SlideDigitalClock::render(Render& render)
+void WidgetDigitalClock::render(Render& render)
 {
     const Vector2i pos{800/2, 480/2};
 

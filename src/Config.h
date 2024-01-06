@@ -41,6 +41,7 @@
 #define TS_HOSTNAME "talos"
 #define TS_MAX_WIFI_CONNECTION_TIMEOUT 30
 #define TS_MAX_NTP_CONNECTION_TIMEOUT 15
+#define TS_SECRET_FIRST_TIME_SETUP_PASSWORD "123456789"
 
 /* The TALOS Spotify client ID */
 #define TS_SPOTIFY_CLIENT_ID "bb15029eaeea4bd086008584ae1fbaf7" 
@@ -56,6 +57,8 @@
 #define TS_PIN_PAPER_RST 33
 #define TS_PIN_PAPER_BUSY 15
 #define TS_PIN_PAPER_PWR 13
+
+#define TS_PIN_FIRST_TIME_SETUP 38
 
 namespace ts {
 

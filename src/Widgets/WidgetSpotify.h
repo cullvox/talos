@@ -14,7 +14,6 @@ public:
     virtual void render(Render& render) override;
 
 private:
-    WiFiClientSecure& _wifiClient;
     SpotifyESP* _spotify;
     Strings::Select _currentlyPlaying;
     size_t _imageLength;    

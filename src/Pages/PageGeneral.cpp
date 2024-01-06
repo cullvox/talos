@@ -7,7 +7,7 @@ template <typename T> T CLAMP(const T& value, const T& low, const T& high)
     return value < low ? low : (value > high ? high : value); 
 }
 
-void SlideGeneral::render(Render& render)
+void PageGeneral::render(Render& render)
 {
     /* draw title */
     render
@@ -40,17 +40,17 @@ void SlideGeneral::render(Render& render)
 
 }
 
-void SlideGeneral::setSeverity(Strings::Select selection)
+void PageGeneral::setSeverity(Strings::Select selection)
 {
     _severity = selection;
 }
 
-void SlideGeneral::setPrimary(Strings::Select selection) 
+void PageGeneral::setPrimary(Strings::Select selection) 
 { 
     Strings::copyTo(selection, _primary, sizeof(_primary)-1); 
 }
 
-void SlideGeneral::setSecondary(Strings::Select selection) 
+void PageGeneral::setSecondary(Strings::Select selection) 
 {
     Strings::copyTo(selection, _secondary, sizeof(_secondary)-1); 
 }

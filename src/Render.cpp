@@ -136,12 +136,54 @@ Render& Render::drawRect(Rect2i rect)
 {
     assert(_bitmap && "Bitmap must be set before drawing!");
 
-    
+    return *this;
+}
+
+Render& Render::drawCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cornername) {
+  int16_t f = 1 - r;
+  int16_t ddF_x = 1;
+  int16_t ddF_y = -2 * r;
+  int16_t x = 0;
+  int16_t y = r;
+
+  while (x < y) {
+    if (f >= 0) {
+      y--;
+      ddF_y += 2;
+      f += ddF_y;
+    }
+    x++;
+    ddF_x += 2;
+    f += ddF_x;
+    if (cornername & 0x4) {
+      setPixel({(int16_t)(x0 + x), (int16_t)(y0 + y)}, Color::eBlack);
+      setPixel({(int16_t)(x0 + y), (int16_t)(y0 + x)}, Color::eBlack);
+    }
+    if (cornername & 0x2) {
+      setPixel({(int16_t)(x0 + x), (int16_t)(y0 - y)}, Color::eBlack);
+      setPixel({(int16_t)(x0 + y), (int16_t)(y0 - x)}, Color::eBlack);
+    }
+    if (cornername & 0x8) {
+      setPixel({(int16_t)(x0 - y), (int16_t)(y0 + x)}, Color::eBlack);
+      setPixel({(int16_t)(x0 - x), (int16_t)(y0 + y)}, Color::eBlack);
+    }
+    if (cornername & 0x1) {
+      setPixel({(int16_t)(x0 - y), (int16_t)(y0 - x)}, Color::eBlack);
+      setPixel({(int16_t)(x0 - x), (int16_t)(y0 - y)}, Color::eBlack);
+    }
+  }
+}
+
+Render& Render::drawCircle(uint16_t radius)
+{
+    assert(_bitmap && "Bitmap must be set before drawing!");
+
+
 
     return *this;
 }
 
-Render& Render::drawRoundedRect(int x, int y, int r)
+Render& Render::drawRoundedRect(int x, int y, int w, int h, int r)
 {
     assert(_bitmap && "Bitmap must be set before drawing!");
 
@@ -157,19 +199,10 @@ Render& Render::drawRoundedRect(int x, int y, int r)
     drawVLine(x + w - 1, y + r, h - 2 * r); // Right
     
     // draw four corners
-    drawCircleHelper(x + r, y + r, r, 1, color);
-    drawCircleHelper(x + w - r - 1, y + r, r, 2, color);
-    drawCircleHelper(x + w - r - 1, y + h - r - 1, r, 4, color);
-    drawCircleHelper(x + r, y + h - r - 1, r, 8, color);
-
-    return *this;
-}
-
-Render& Render::drawCircle(uint16_t radius)
-{
-    assert(_bitmap && "Bitmap must be set before drawing!");
-
-
+    drawCircleHelper(x + r, y + r, r, 1);
+    drawCircleHelper(x + w - r - 1, y + r, r, 2);
+    drawCircleHelper(x + w - r - 1, y + h - r - 1, r, 4);
+    drawCircleHelper(x + r, y + h - r - 1, r, 8);
 
     return *this;
 }
