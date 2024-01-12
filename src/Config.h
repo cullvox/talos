@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Arduino.h"
+
 #define TS_STRINGIFY(a) TS_XSTRINGIFY(a)
 #define TS_XSTRINGIFY(a) #a
 
@@ -72,6 +74,10 @@ struct Config {
     bool spotifyEnabled;
     bool spotifyAuthorized;
     String spotifyRefreshToken; 
+    int utcOffset;
+    bool is24HourClock;
 };
 
-}
+Config& GetConfig();
+
+} /* namespace ts */

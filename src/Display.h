@@ -20,12 +20,12 @@ public:
     void present(const uint8_t* buffer);
     void sleep();
     void clear();
+    void reset();
  
 private:
     static void delayMs(unsigned int delaytime);
     
     void spiTransfer(uint8_t data);
-    void reset();
     void waitForIdle();
     void sendCommand(uint8_t command);
     void sendData(uint8_t data);

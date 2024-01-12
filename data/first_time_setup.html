@@ -24,7 +24,7 @@
       <div class="grid">
 
         <article>
-          <h3> <i class="fa fa-wifi fa-fw"></i> Enter your WiFi information</h3>
+          <h3> <i class="fa fa-wifi fa-fw"></i> WiFi Information</h3>
           
           <input type="text" id="wifi_ssid" name="wifi_ssid" placeholder="&#xf25b; WiFi SSID" style="font-family:Arial, FontAwesome" required/>
           <label for="wifi_password">
@@ -33,10 +33,22 @@
           </label>
           <input type="checkbox" id="wifi_password_show" onchange="togglePassword()" />
           <label for="wifi_password_show">Show Password</label>
-          
         
+        </article>
+
+        <article>
+          
+          <label for="enable_24_hour_clock">
+            <input type="checkbox" id="enable_24_hour_clock" name="use_24_hour_clock" />
+            Use 24 Hour Clock
+          </label>
+
+          <h3><i class="fa fa-clock-o"></i>  Time Information</h3>
+          <input type="number" id="utc_offset" name="utc_offset" placeholder="UTC Offset Seconds" style="font-family:Arial, FontAwesome" required />
+
 
         </article>
+        
 
         <article>
           <h3><i class="fa fa-spotify fa-fw" aria-hidden="true"></i> Spotify</h3>
@@ -67,6 +79,9 @@
 <script>
   const checkPassword = document.getElementById("wifi_password_show");
   const inputPassword = document.getElementById("wifi_password");
+  const utcOffset = document.getElementById("utc_offset");
+
+  
 
   function togglePassword()
   {
@@ -77,5 +92,17 @@
   {
     location = document.baseURI + "/setup_complete.html";
   }
+
+  function getUtcOffset()
+  {
+    return new Date().getTimezoneOffset() * 60;
+  }
+
+  function loaded()
+  {
+    utcOffset.value = getUtcOffset();
+  }
+
+  window.onload = loaded;
 
 </script>
