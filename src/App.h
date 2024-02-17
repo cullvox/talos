@@ -10,6 +10,7 @@
 #include "Render.h"
 #include "Display.h"
 #include "Pages/PageGeneral.h"
+#include "Pages/Sandbox.h"
 
 namespace ts {
 
@@ -17,8 +18,21 @@ class Talos {
 public:
     Talos();
 
+    /** @brief Initializes the device and ensures that we have initialized to a useful point. 
+     * 
+     * Initializes the device to be connected to the internet and prepared to 
+     * display pages. Returns true even when WiFi connectivity fails so that
+     * users with a poor or currently nonexistant internet connection can
+     * ensure that their device works. Will display an error on the screen 
+     * if possible when initialization effectively fails.
+     * 
+     * @return Anything other than true means that first time setup or before that failed. (serious problem)
+     * 
+     */
     bool init();
-    bool run();
+
+    
+    void run();
     void shutdown();
 
 private:
@@ -34,7 +48,7 @@ private:
     bool refreshSpotify();
 
     /** @brief Clears the configuration and restarts the device. */
-    static void interruptClear();
+    static void interruptClear(void* arg);
 
     void displayGeneral(Strings::Select severity, Strings::Select primary, Strings::Select secondary);
 
@@ -50,6 +64,8 @@ private:
     HTTPClient _httpClient;
     SpotifyESP _spotify;
     Config _config;
+
+    PageSandbox pageSandbox;
 };
 
 } /* namespace ts */

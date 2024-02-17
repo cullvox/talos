@@ -22,6 +22,7 @@ Talos::Talos()
     : _display()
     , _spotify(_wifiClient, _httpClient, TS_SPOTIFY_CLIENT_ID)
     , _server(80)
+    , pageSandbox(_spotify)
 {
     memset(_config.wifiSSID, 0, sizeof(_config.wifiSSID));
     memset(_config.wifiPassword, 0, sizeof(_config.wifiPassword));
@@ -37,7 +38,7 @@ bool Talos::init()
 
     /* Setup the first-time-setup interrupt pin. */
     pinMode(TS_PIN_FIRST_TIME_SETUP, INPUT_PULLUP);
-    attachInterrupt(TS_PIN_FIRST_TIME_SETUP, Talos::interruptClear, FALLING);
+    attachInterruptArg(TS_PIN_FIRST_TIME_SETUP, Talos::interruptClear, this, FALLING);
 
     /* PSRAM is very useful for the Spotify image API and other web things.
         Without it some things have to be cut out... (Spotify album art) */
@@ -93,14 +94,27 @@ bool Talos::init()
 
     _buffer.clear();
     _buffer.blit(siegeBits, {190, 10});
+    
+    _render
+        .setCursor({550, 330})
+        .setFontSize(60)
+        .setFillColor(Color::eBlack)
+        .setOutlineColor(Color::eWhite)
+        .drawText("for siege")
+        .seekCursor({0, 50})
+        .setFontSize(35)
+        .drawText("by cullvox");
+
     _display.present(_buffer.data());
 
+
+
     /* Read in the users configuration, if any. */
-doFTS:
     readConfig();
 
-    if (_config.spotifyRefreshToken.isEmpty())
+    if (_config.spotifyRefreshToken.isEmpty()) {
         _config.isFirstTimeSetup = true; /* The configuration isn't completely finished. */
+    }
 
     /* Preform the first time setup. */
     if (_config.isFirstTimeSetup) {
@@ -112,47 +126,67 @@ doFTS:
 
     /* Attempt to connect to the users Wi-Fi, on fail wait a little and try again. */
     if (!connectToWiFi()) {
-        sleep(30);
-        ESP.restart();
-        return false;
+        return true; /* This is a successful error condition. */
     }
 
-    /* Check if Spotify was correctly and fully authenticated. */
-    if (_config.spotifyEnabled && _config.spotifyRefreshToken.isEmpty())
-    {
-        /* Authenticate again. */
-        if (!preformSpotifyAuthorization()) return false;
-    } else if (_config.spotifyEnabled) {
-        _spotify.setRefreshToken(_config.spotifyRefreshToken.c_str());
-
-        if (!refreshSpotify())
-            log_e("Could not refresh Spotify's refresh token!");
-    }
-
-    /* Display the splash page. */
-    WidgetSpotify spotifyWidget{_spotify};
-
-    spotifyWidget.fetch(_wifiClient);
-
-    _buffer.clear();
-    spotifyWidget.render(_render);
-    _display.present(_buffer.data());
 
     printEnd("Initializing Devices");
 
     return true;
 }
 
-bool Talos::run()
+void Talos::run()
 {
+
+    _display.reset();
 
     /* If the user pressed the reset button we will completely reset the device. */
     if (_bReset) {
         clearConfig();
-        ESP.restart();
+       ESP.restart();
     }
 
-    return true;
+    /* We must wait for the user to be connected before we display anything. */
+    if (!WiFi.isConnected()) {
+        if (!connectToWiFi()) {
+            log_e("Could not connect to WiFi, skipping page for now.");
+            return;
+        }
+    }
+
+    /* Check if the user was authenticated with spotify yet. */
+    if (_config.spotifyEnabled && _config.spotifyRefreshToken.isEmpty()) {
+
+        if (!preformSpotifyAuthorization()) {
+         
+            /* Not being able to authenticate is an error that the 
+                user should probably reset their config for. */
+            // displayGeneral();
+            return; 
+        }
+    } else if (_config.spotifyEnabled) {
+
+        /* Use the saved refresh token. */
+        _spotify.setRefreshToken(_config.spotifyRefreshToken.c_str());
+
+        /* Try to refresh the token now. */
+        if (!refreshSpotify()) {
+            log_e("Could not refresh Spotify's refresh token!");
+            return;
+        }
+    }
+
+    /* Display the splash page. */
+    _wifiClient.setCACert(SpotifyCert::server);
+    pageSandbox.fetch(_wifiClient);
+
+    _buffer.clear();
+    pageSandbox.render(_render);
+    _display.present(_buffer.data());
+
+    _display.sleep();
+
+    sleep(180);
 }
 
 void Talos::printBegin(const char* name)
@@ -341,12 +375,20 @@ bool Talos::preformFirstTimeSetup()
     /* Clear any previous configuration before first time setup.*/
     clearConfig();
 
-    /* Start the access point. */
-    String pass = TS_SECRET_FIRST_TIME_SETUP_PASSWORD;
-    String ssid = F("TALOS_");
-    ssid.concat(WiFi.macAddress().substring(3, 5));
+    /* Generate a random password for the WiFi AP. */
+    char dict[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*_";
+    char password[12] = {0};
+    
+    for (int i = 0; i < 8; i++)
+        password[i] = dict[random(sizeof(dict)-1)];
 
-    WiFi.softAP(ssid, pass);
+    log_i("WiFi AP password: %s", password);
+
+    /* Start the access point. */
+    String ssid = F("TALOS_");
+    ssid.concat(WiFi.macAddress().substring(6, 8));
+
+    WiFi.softAP(ssid, password);
 
     /* Start the DNS server to catch all for the captive portal. */
     DNSServer dnsServer;
@@ -374,6 +416,13 @@ bool Talos::preformFirstTimeSetup()
 
             if (p->name() == "enable_spotify")
                 _config.spotifyEnabled = true; /* data race shouldn't occur here... hopefully.  */
+
+            if (p->name() == "utc_offset")
+                _config.utcOffset = p->value().toInt();
+
+            if (p->name() == "enable_24_hour_time")
+                _config.is24HourClock = true;
+
         }
  
         log_i("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.wifiSSID, _config.wifiPassword);
@@ -479,6 +528,7 @@ bool Talos::preformSpotifyAuthorization()
 
 bool Talos::refreshSpotify()
 {
+    _wifiClient.setCACert(SpotifyCert::server);
     if (!_spotify.checkAndRefreshAccessToken()) return false;
 
     _config.spotifyRefreshToken = _spotify.getRefreshToken();
@@ -500,10 +550,10 @@ void Talos::displayGeneral(Strings::Select severity, Strings::Select primary, St
     _display.present(_buffer.data());
 }
 
-void Talos::interruptClear()
+void Talos::interruptClear(void* arg)
 {
-    clearConfig();
-    ESP.restart();
+    Talos* talos = (Talos*)arg;
+    talos->_bReset = true;
 }
 
 } /* namespace ts */

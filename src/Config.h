@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Arduino.h"
+
 #define TS_STRINGIFY(a) TS_XSTRINGIFY(a)
 #define TS_XSTRINGIFY(a) #a
 
@@ -93,7 +95,6 @@ public:
     String getWifiSsid() const { return _wifiSsid; }
     String getWifiPassword() const { return _wifiPassword; }
     String getSpotifyRefreshToken() const { return _spotifyRefreshToken; }
-
 };
 
-}
+} /* namespace ts */

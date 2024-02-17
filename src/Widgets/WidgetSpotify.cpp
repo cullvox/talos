@@ -107,19 +107,42 @@ bool WidgetSpotify::fetch(WiFiClientSecure& client)
     log_i("Requesting Spotify currently playing.");
     
     char imageURL[SPOTIFY_URL_CHAR_LENGTH];
+
+    bool isPlaying = false;
     auto onCurrentyPlaying = [&](SpotifyCurrentlyPlaying currentlyPlaying){
         log_i("Track name: %s", currentlyPlaying.trackName);
         log_i("Artist name: %s", currentlyPlaying.artists[0].artistName);
 
+        isPlaying = false;
+        _currentlyPlaying = currentlyPlaying.isPlaying ? Strings::ePlaybackNowPlaying : Strings::ePlaybackWasPlaying;
         strncpy(_title, currentlyPlaying.trackName, SPOTIFY_NAME_CHAR_LENGTH);
         strncpy(_artist, currentlyPlaying.artists[0].artistName, SPOTIFY_NAME_CHAR_LENGTH);
-        strncpy(imageURL, currentlyPlaying.albumImages[/* smallest */ 1].url, SPOTIFY_URL_CHAR_LENGTH);
+
+        if (currentlyPlaying.isPlaying)
+            strncpy(imageURL, currentlyPlaying.albumImages[/* smallest */ 1].url, SPOTIFY_URL_CHAR_LENGTH);
     };
 
     client.setCACert(SpotifyCert::server);
     _spotify->getCurrentlyPlayingTrack(onCurrentyPlaying, "US");
 
     yield();
+
+    //if (!isPlaying) {
+    //    auto onRecentlyPlayed = [&](SpotifyRecentlyPlayed recentlyPlayed){
+    //        log_i("Track name: %s", currentlyPlaying.trackName);
+    //        log_i("Artist name: %s", currentlyPlaying.artists[0].artistName);
+//
+    //        isPlaying = false;
+    //        _currentlyPlaying = currentlyPlaying.isPlaying ? Strings::ePlaybackNowPlaying : Strings::ePlaybackWasPlaying;
+    //        strncpy(_title, currentlyPlaying.trackName, SPOTIFY_NAME_CHAR_LENGTH);
+    //        strncpy(_artist, currentlyPlaying.artists[0].artistName, SPOTIFY_NAME_CHAR_LENGTH);
+//
+    //        if (currentlyPlaying.isPlaying)
+    //            strncpy(imageURL, currentlyPlaying.albumImages[/* smallest */ 1].url, SPOTIFY_URL_CHAR_LENGTH);
+    //    };
+    // 
+    //    _spotify->gaetRecentlyPlayedTracks(onRecentlyPlayed);
+    //}
 
     log_i("Artist: %s", _artist);
     log_i("Track: %s", _title);

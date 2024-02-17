@@ -18,6 +18,7 @@ private:
     Strings::Select _currentlyPlaying;
     size_t _imageLength;    
     uint8_t* _image = nullptr;
+    String _imageURL;
     char _title[SPOTIFY_NAME_CHAR_LENGTH];
     char _artist[SPOTIFY_NAME_CHAR_LENGTH];
 };

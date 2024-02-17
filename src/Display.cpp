@@ -99,7 +99,66 @@ bool Display::begin(uint16_t csPin, uint16_t rstPin, uint16_t dcPin, uint16_t bu
 
     reset();
 
-    // sendCommand(0x01); 
+
+    return true;
+}
+
+void Display::delayMs(unsigned int delaytime) {
+    delay(delaytime);
+}
+
+void Display::spiTransfer(unsigned char data) {
+    digitalWrite(_csPin, LOW);
+    _pSpi->transfer(data);
+    digitalWrite(_csPin, HIGH);
+}
+
+
+/**
+ *  @brief: basic function for sending commands
+ */
+void Display::sendCommand(unsigned char command) {
+    digitalWrite(_dcPin, LOW);
+    spiTransfer(command);
+}
+
+/**
+ *  @brief: basic function for sending data
+ */
+void Display::sendData(unsigned char data) {
+    digitalWrite(_dcPin, HIGH);
+    spiTransfer(data);
+}
+
+/**
+ *  @brief: Wait until the busy_pin goes HIGH
+ */
+void Display::waitForIdle(void) {
+    unsigned char busy;
+    log_i("e-Paper Busy\n");
+    do {
+        sendCommand(0x71);
+        busy = digitalRead(_busyPin);
+    } while (busy == 0);
+    log_i("e-Paper Busy Release\n");
+    delayMs(20);
+}
+
+/**
+ *  @brief: module reset.
+ *          often used to awaken the module in deep sleep,
+ *          see Display::Sleep();
+ */
+void Display::reset(void)
+{
+    digitalWrite(_rstPin, HIGH);
+    delayMs(20); 
+    digitalWrite(_rstPin, LOW);                //module reset    
+    delayMs(4);
+    digitalWrite(_rstPin, HIGH);
+    delayMs(20);    
+
+        // sendCommand(0x01); 
     // sendData(0x07);
     // sendData(0x07);
     // sendData(0x3f);
@@ -178,63 +237,6 @@ bool Display::begin(uint16_t csPin, uint16_t rstPin, uint16_t dcPin, uint16_t bu
 
     setLutByHost(LUT_VCOM_7IN5_V2, LUT_WW_7IN5_V2, LUT_BW_7IN5_V2, LUT_WB_7IN5_V2, LUT_BB_7IN5_V2);
 
-    return true;
-}
-
-void Display::delayMs(unsigned int delaytime) {
-    delay(delaytime);
-}
-
-void Display::spiTransfer(unsigned char data) {
-    digitalWrite(_csPin, LOW);
-    _pSpi->transfer(data);
-    digitalWrite(_csPin, HIGH);
-}
-
-
-/**
- *  @brief: basic function for sending commands
- */
-void Display::sendCommand(unsigned char command) {
-    digitalWrite(_dcPin, LOW);
-    spiTransfer(command);
-}
-
-/**
- *  @brief: basic function for sending data
- */
-void Display::sendData(unsigned char data) {
-    digitalWrite(_dcPin, HIGH);
-    spiTransfer(data);
-}
-
-/**
- *  @brief: Wait until the busy_pin goes HIGH
- */
-void Display::waitForIdle(void) {
-    unsigned char busy;
-    log_i("e-Paper Busy\n");
-    do {
-        sendCommand(0x71);
-        busy = digitalRead(_busyPin);
-    } while (busy == 0);
-    log_i("e-Paper Busy Release\n");
-    delayMs(20);
-}
-
-/**
- *  @brief: module reset.
- *          often used to awaken the module in deep sleep,
- *          see Display::Sleep();
- */
-void Display::reset(void)
-{
-    digitalWrite(_rstPin, HIGH);
-    delayMs(20); 
-    digitalWrite(_rstPin, LOW);                //module reset    
-    delayMs(4);
-    digitalWrite(_rstPin, HIGH);
-    delayMs(20);    
 }
 
 void Display::present(const uint8_t* buffer) 
