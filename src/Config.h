@@ -62,16 +62,38 @@
 
 namespace ts {
 
-struct Config {
-    bool isFirstTimeSetup;
-    bool isWifiEnterprise;
-    char wifiSSID[64+1];
-    char wifiUsername[64+1];
-    char wifiIdentity[64+1];
-    char wifiPassword[32+1];
-    bool spotifyEnabled;
-    bool spotifyAuthorized;
-    String spotifyRefreshToken; 
+class Config {
+    bool _isFirstTimeSetup;
+    String _wifiSsid;
+    String _wifiPassword;
+    bool _isSpotifyEnabled;
+    bool _isSpotifyAuthorized;
+    String _spotifyRefreshToken; 
+
+public:
+    Config()
+        : _isFirstTimeSetup(true) {}
+    
+    ~Config() = default;
+
+    void load();        /* loads values from preferences into memory.*/
+    void save();        /* saves values in memory to the preferences. */
+    void clear();       /* clears all config values from preferences and in memory. */
+
+    void setFirstTimeSetup(bool isFirstTimeSetup) { _isFirstTimeSetup = isFirstTimeSetup; } 
+    String setWifiSsid(const String& wifiSsid) { _wifiSsid = wifiSsid; }
+    String setWifiPassword(const String& wifiPassword) { _wifiPassword = wifiPassword; }
+    bool setSpotifyEnabled(bool isSpotifyEnabled) { _isSpotifyEnabled; }
+    bool setSpotifyAuthorized(bool isSpotifyAuthorized) { _isSpotifyAuthorized; }
+    String setSpotifyRefreshToken(const String& spotifyRefreshToken) { _spotifyRefreshToken; }
+
+    bool getFirstTimeSetup() const { return _isFirstTimeSetup; };
+    bool getSpotifyEnabled() const { return _isSpotifyEnabled; }
+    bool getSpotifyAuthorized() const { return _isSpotifyAuthorized; }
+    String getWifiSsid() const { return _wifiSsid; }
+    String getWifiPassword() const { return _wifiPassword; }
+    String getSpotifyRefreshToken() const { return _spotifyRefreshToken; }
+
 };
 
 }
