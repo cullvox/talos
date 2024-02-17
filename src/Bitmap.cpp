@@ -12,7 +12,7 @@ namespace ts {
 
 bool BitmapInterface::get(Vector2i position) const
 {
-    int byteIndex = position.y * ((extent().width + 7) / 8); // Calculate the starting byte of the row
+    int byteIndex = position.y * ((extent().x + 7) / 8); // Calculate the starting byte of the row
     int bitOffset = position.x % 8; // Calculate the bit offset within the byte
     int byteOffset = position.x / 8; // Calculate the byte offset within the row
 
@@ -23,10 +23,10 @@ bool BitmapInterface::get(Vector2i position) const
 void BitmapInterface::set(Vector2i position, bool value)
 {
     const Extent2i ext = extent();
-    if (position.x >= ext.width ||
-        position.y >= ext.height) return;
+    if (position.x >= ext.x ||
+        position.y >= ext.y) return;
 
-    int byteIndex = position.y * ((ext.width + 7) / 8); // Calculate the starting byte of the row
+    int byteIndex = position.y * ((ext.x + 7) / 8); // Calculate the starting byte of the row
     int bitOffset = position.x % 8; // Calculate the bit offset within the byte
     int byteOffset = position.x / 8; // Calculate the byte offset within the row
 
@@ -50,12 +50,12 @@ void BitmapInterface::blit(const BitmapInterface& src, Vector2i offset, bool ove
 
     const Extent2i ext = extent();
     Extent2i srcExtent = src.extent();
-    int srcWidth = srcExtent.width;
-    int srcHeight = srcExtent.height;
+    int srcWidth = srcExtent.x;
+    int srcHeight = srcExtent.y;
 
-    for (uint16_t x = 0; x < srcWidth && x < ext.width; x++)
+    for (uint16_t x = 0; x < srcWidth && x < ext.x; x++)
     {
-        for (uint16_t y = 0; y < srcHeight && y < ext.width; y++)
+        for (uint16_t y = 0; y < srcHeight && y < ext.x; y++)
         {
             Extent2i srcPosition{x, y};
             Extent2i destPosition{
@@ -93,15 +93,15 @@ BitmapAlloc::BitmapAlloc(BitmapAlloc&& rhs)
 
 BitmapAlloc::BitmapAlloc(Extent2i extent, bool usePsRam)
     : _extent(extent)
-    , _widthBytes(((extent.width % 8 == 0) ? (extent.width / 8 ) : (extent.width / 8 + 1)))
-    , _heightBytes(extent.height)
+    , _widthBytes(((extent.x % 8 == 0) ? (extent.x / 8 ) : (extent.x / 8 + 1)))
+    , _heightBytes(extent.y)
     , _sizeBytes(_widthBytes * _heightBytes)
     , _data(nullptr)
 {
-    assert(extent.width <= 1024 && "Bitmap width must be less than 1024!");
-    assert(extent.height <= 1024 && "Bitmap height must be less than 1024!");
+    assert(extent.x <= 1024 && "Bitmap width must be less than 1024!");
+    assert(extent.y <= 1024 && "Bitmap height must be less than 1024!");
 
-    log_d("Allocating bitmap of width %d, height %d.", extent.width, extent.height);
+    log_d("Allocating bitmap of width %d, height %d.", extent.x, extent.y);
     
     if (usePsRam && !psramFound())
     {

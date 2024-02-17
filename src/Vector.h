@@ -1,54 +1,59 @@
 #pragma once
 
-#include <stdint.h>
-
 namespace ts {
 
-struct Extent2i;
+template<typename T = int>
+struct Vector2 {
+public:
+    T x;
+    T y;
 
-struct Vector2i {
-    int16_t x;
-    int16_t y;
+    constexpr Vector2()         { x = y = {}; };
+    constexpr Vector2(T xy)     { x = y = xy; }
+    constexpr Vector2(T x, T y) { x = x; y = y; }
 
-    Vector2i() = default;
-    ~Vector2i() = default;
+    static constexpr Vector2 make()         { x = y = {}; }
+    static constexpr Vector2 make(T xy)     { x = y = xy; }
+    static constexpr Vector2 make(T x, T y) { x = x; y = y; }  
 
-    static inline Vector2i zero() { return Vector2i{0, 0}; }
-    
-    inline Vector2i operator+(const Vector2i& rhs) const { return Vector2i{ (int16_t)(x + rhs.x), (int16_t)(y + rhs.y)}; }
-    inline Vector2i operator+(int16_t value) const { return Vector2i{ (int16_t)(x + value), (int16_t)(y + value)}; }
-    inline Vector2i operator-(const Vector2i& rhs) const { return Vector2i{ (int16_t)(x - rhs.x), (int16_t)(y - rhs.y)}; }
-    inline Vector2i operator-(int16_t value) const { return Vector2i{ (int16_t)(x - value), (int16_t)(y - value)}; }
-    inline Vector2i operator*(const Vector2i& rhs) const { return Vector2i{ (int16_t)(x * rhs.x), (int16_t)(y * rhs.y)}; }
-    inline Vector2i operator*(int16_t scalor) const { return Vector2i{ (int16_t)(x * scalor), (int16_t)(y * scalor)}; }
-    inline Vector2i operator/(const Vector2i& rhs) const { return Vector2i{ (int16_t)(x / rhs.x), (int16_t)(y / rhs.y)}; }
-    inline Vector2i operator/(int16_t value) const { return Vector2i{ (int16_t)(x / value), (int16_t)(y / value)}; }
-    inline Vector2i& operator+=(const Vector2i& rhs) { x += rhs.x; y += rhs.y; return *this; }
-    inline Vector2i& operator-=(const Vector2i& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
-    
-    inline operator Extent2i() const;
+    constexpr Vector2 zero()    { return Vector2{(T)0}; }
+    constexpr Vector2 one()     { return Vector2{(T)1};  }
+
+public:
+
+    constexpr Vector2 operator+(const Vector2& rhs) const { return Vector2{x + rhs.x, y + rhs.y}; }
+    constexpr Vector2 operator-(const Vector2& rhs) const { return Vector2{x - rhs.x, y - rhs.y}; }
+    constexpr Vector2 operator*(const Vector2& rhs) const { return Vector2{x * rhs.x, y * rhs.y}; }
+    constexpr Vector2 operator/(const Vector2& rhs) const { return Vector2{x / rhs.x, y / rhs.y}; }
+
+    constexpr Vector2 operator+(T rhs) const { return Vector2{x + rhs, y + rhs}; }
+    constexpr Vector2 operator-(T rhs) const { return Vector2{x - rhs, y - rhs}; }
+    constexpr Vector2 operator*(T rhs) const { return Vector2{x * rhs, y * rhs}; }
+    constexpr Vector2 operator/(T rhs) const { return Vector2{x / rhs, y / rhs}; }
+
+    constexpr Vector2& operator+=(const Vector2& rhs) { x += rhs.x; y += rhs.y; return *this; }
+    constexpr Vector2& operator-=(const Vector2& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
+    constexpr Vector2& operator*=(const Vector2& rhs) { x *= rhs.x; y *= rhs.y; return *this; }
+    constexpr Vector2& operator/=(const Vector2& rhs) { x /= rhs.x; y /= rhs.y; return *this; }
+
+    constexpr Vector2& operator+=(T rhs) { x += rhs; y += rhs; return *this; }
+    constexpr Vector2& operator-=(T rhs) { x -= rhs; y -= rhs; return *this; }
+    constexpr Vector2& operator*=(T rhs) { x *= rhs; y *= rhs; return *this; }
+    constexpr Vector2& operator/=(T rhs) { x /= rhs; y /= rhs; return *this; }
+
 };
 
-struct Extent2i {
-    uint16_t width;
-    uint16_t height;
+template<typename T>
+using Extent2 = Vector2<T>;
 
-    constexpr Extent2i(uint16_t width, uint16_t height)
-        : width(width)
-        , height(height) 
-    {}
+#ifndef TS_VECTOR_NO_PREDEFINED
+#include "Numeric.h"
 
-    Extent2i() = default;
-    ~Extent2i() = default;
+using Extent2i = Extent2<u32>;
+using Extent2f = Extent2<f32>;
 
-    static inline Extent2i zero() { return Extent2i{0, 0}; }
-
-    inline bool operator==(const Extent2i& rhs) const { return (width == rhs.width) && (height == rhs.height); }
-    inline operator Vector2i() const { return Vector2i{ (int16_t)width, (int16_t)height}; }
-    inline Extent2i operator+(const Extent2i& rhs) const { return Extent2i{ (uint16_t)(width + rhs.width), (uint16_t)(height + rhs.height)}; }
-    inline Extent2i operator-(const Extent2i& rhs) const { return Extent2i{ (uint16_t)(width - rhs.width), (uint16_t)(height - rhs.height)}; }
-};
-
-Vector2i::operator ts::Extent2i() const { return Extent2i{(uint16_t)x, (uint16_t)y}; }
+using Vector2i = Vector2<u32>;
+using Vector2f = Vector2<f32>;
+#endif
 
 } // namespace ts

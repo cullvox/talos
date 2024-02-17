@@ -224,40 +224,6 @@ void Talos::printStartup()
     log_printf("");
 }
 
-void Talos::readConfig()
-{
-    _prefs.begin("talos");
-    _config.isFirstTimeSetup = _prefs.getBool("fts", true);
-    _prefs.getBytes("wifissid", _config.wifiSSID, sizeof(_config.wifiSSID)-1);
-    _prefs.getBytes("wifipass", _config.wifiPassword, sizeof(_config.wifiPassword)-1);
-    _config.spotifyEnabled = _prefs.getBool("spotenable", false);
-    _config.spotifyRefreshToken = _prefs.getString("spotrefresh", "");
-
-    log_v("config: fts = %s", _config.isFirstTimeSetup ? "true" : "false");
-    log_v("config: wifissid = %s", _config.wifiSSID);
-    log_v("config: wifipass = %s", _config.wifiPassword);
-    log_v("config: spotenabled = %d", _config.spotifyEnabled);
-    log_v("config: spotrefresh = %s", _config.spotifyRefreshToken.c_str());
-
-    // log_i("config: spotrefreshtime = %d")
-    _prefs.end();
-}
-
-void Talos::writeConfig()
-{
-
-}
-
-void Talos::clearConfig()
-{
-    log_i("Preforming full wipe!");
-
-    Preferences prefs;
-    prefs.begin("talos");
-    prefs.clear();
-    prefs.end();
-}
-
 class CaptiveRequestHandler : public AsyncWebHandler
 {
 public:

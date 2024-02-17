@@ -61,8 +61,6 @@ public:
     uint16_t getOutlineThickness();
     BitmapInterface* getBitmap();
 
-    
-
     Render& setPixel(Vector2i pos, Color color);
     Render& drawVLine(int x, int y, int length);
     Render& drawHLine(int x, int y, int length);
@@ -72,7 +70,6 @@ public:
     Render& drawCircle(uint16_t radius);
     Render& drawRoundedRect(int x, int y, int w, int h, int r);
     Render& drawArc(float cx, float cy, float px, float py, float theta, int N);
-
 
     Render& drawText(const char* text);
     Render& drawTextFormat(const char* format, ...);

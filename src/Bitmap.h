@@ -1,9 +1,17 @@
 #pragma once
 
+#include "Numeric.h"
 #include "Vector.h"
 #include "Rect.h"
 
+
 namespace ts {
+
+enum class BlitOp {
+    eAnd,
+    eXOr,
+    eNegate
+};
 
 class BitmapInterface {
 public:
@@ -12,8 +20,8 @@ public:
     virtual Extent2i extent() const = 0;
 
     /** @brief Returns the data of the bitmap. */
-    virtual const uint8_t* data() const = 0;
-    virtual uint8_t* data() = 0;
+    virtual const byte* data() const = 0;
+    virtual byte* data() = 0;
     
     /** @brief Sets one bit on or off. */
     void set(Vector2i position, bool value);
@@ -25,7 +33,7 @@ public:
     void blit(const BitmapInterface& src, Vector2i offset, bool override = false);
 
     /** @brief Clears the value of the bitmap. */
-    void clear(uint8_t value = 0xFF);
+    void clear(u8 value = 0xFF);
 
     /** @brief Flips every bit in this bitmap. */
     void flip();
@@ -33,8 +41,8 @@ public:
     inline uint32_t sizeBytes() 
     {
         Extent2i ext = extent();
-        uint32_t _widthBytes = ((ext.width % 8 == 0) ? (ext.width / 8) : (ext.width / 8 + 1));
-        uint32_t _heightBytes = ext.height;
+        uint32_t _widthBytes = ((ext.x % 8 == 0) ? (ext.x / 8) : (ext.x / 8 + 1));
+        uint32_t _heightBytes = ext.y;
         return _widthBytes * _heightBytes;
     } 
 
