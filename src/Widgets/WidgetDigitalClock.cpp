@@ -10,17 +10,17 @@ namespace ts {
 bool WidgetDigitalClock::fetch(WiFiClientSecure& client)
 {
     time_t now = time(NULL);
-    now += GetConfig().utcOffset;
+    // now += GetConfig().utcOffset;
 
     tm date = {0};
     localtime_r(&now, &date);
 
     /* Construct our time string. */
 
-    if (GetConfig().is24HourClock)
+    //if (GetConfig().is24HourClock)
         strftime(_time, sizeof(_time), "%H : %M", &date);
-    else 
-        strftime(_time, sizeof(_time), "%I : %M %p", &date);
+    //else 
+    //    strftime(_time, sizeof(_time), "%I : %M %p", &date);
 
     return true;
 }

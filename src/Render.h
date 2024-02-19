@@ -27,18 +27,25 @@ enum class RenderAlign {
 };
 
 /** @brief Colors capable of drawing with. */
-enum class Color : uint16_t {
-    eWhite = 0xFFFF,
-    eBlack = 0x0000,
-};
 
-inline bool toBool(Color color) { 
-    switch (color) {
-        case Color::eBlack: return true;
-        case Color::eWhite: return false;
-        default: return false;
+struct Color {
+    enum Enum : uint16_t {
+        eWhite = 0xFFFF,
+        eBlack = 0x0000,
+    };
+
+    operator bool() const { 
+        switch (color) {
+            case Color::eBlack: return true;
+            case Color::eWhite: return false;
+            default: return false;
+        }
     }
-}
+
+    Color operator=()
+
+    Enum value;
+};
 
 /** @brief General purpose renderer for bit-per-pixel bitmap images. */
 class Render {
