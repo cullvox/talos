@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Node.h"
-namespace ts {
 
+namespace ts {
 class Layout : public Node {
 
     Extent2i _extent;
