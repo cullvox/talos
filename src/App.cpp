@@ -14,6 +14,9 @@
 #include "Config.h"
 #include "Pages/Sandbox.h"
 #include "Widgets/WidgetSpotify.h"
+#include "UI/Layout.h"
+#include "UI/VerticalBox.h"
+#include "UI/HorizontalBox.h"
 #include "App.h"
 
 namespace ts {
@@ -24,17 +27,13 @@ Talos::Talos()
     , _server(80)
     , pageSandbox(_spotify)
 {
-    memset(_config.wifiSSID, 0, sizeof(_config.wifiSSID));
-    memset(_config.wifiPassword, 0, sizeof(_config.wifiPassword));
-    memset(_config.wifiIdentity, 0, sizeof(_config.wifiIdentity));
-    memset(_config.wifiUsername, 0, sizeof(_config.wifiUsername));
-    _config.isWifiEnterprise = false;
 }
 
 bool Talos::init()
 {
     printBegin("Initializing Devices");
     printStartup();
+
 
     /* Setup the first-time-setup interrupt pin. */
     pinMode(TS_PIN_FIRST_TIME_SETUP, INPUT_PULLUP);
@@ -62,6 +61,11 @@ bool Talos::init()
     }
 
     log_i("Is font file found: %d", SPIFFS.exists("/fonts/talos.ttf"));
+
+
+    log_v("Loading config...");
+    _config.load();
+    log_v("Loaded config.");
 
     _buffer = BitmapAlloc(_display.extent(), _bHasPsram);
 
@@ -110,14 +114,14 @@ bool Talos::init()
 
 
     /* Read in the users configuration, if any. */
-    readConfig();
+    _config.load();
 
-    if (_config.spotifyRefreshToken.isEmpty()) {
-        _config.isFirstTimeSetup = true; /* The configuration isn't completely finished. */
+    if (_config.getSpotifyRefreshToken().isEmpty()) {
+        _config.setFirstTimeSetup(true); /* The configuration isn't completely finished. */
     }
 
     /* Preform the first time setup. */
-    if (_config.isFirstTimeSetup) {
+    if (_config.getFirstTimeSetup()) {
         if (!preformFirstTimeSetup()) return false;
         _prefs.begin("talos");
         _prefs.putBool("fts", false);
@@ -142,8 +146,8 @@ void Talos::run()
 
     /* If the user pressed the reset button we will completely reset the device. */
     if (_bReset) {
-        clearConfig();
-       ESP.restart();
+        _config.clear();
+        ESP.restart();
     }
 
     /* We must wait for the user to be connected before we display anything. */
@@ -155,7 +159,7 @@ void Talos::run()
     }
 
     /* Check if the user was authenticated with spotify yet. */
-    if (_config.spotifyEnabled && _config.spotifyRefreshToken.isEmpty()) {
+    if (_config.getSpotifyEnabled() && _config.getSpotifyRefreshToken().isEmpty()) {
 
         if (!preformSpotifyAuthorization()) {
          
@@ -164,10 +168,10 @@ void Talos::run()
             // displayGeneral();
             return; 
         }
-    } else if (_config.spotifyEnabled) {
+    } else if (_config.getSpotifyEnabled()) {
 
         /* Use the saved refresh token. */
-        _spotify.setRefreshToken(_config.spotifyRefreshToken.c_str());
+        _spotify.setRefreshToken(_config.getSpotifyRefreshToken().c_str());
 
         /* Try to refresh the token now. */
         if (!refreshSpotify()) {
@@ -259,7 +263,7 @@ public:
 
 bool Talos::connectToWiFi()
 {
-    log_i("Initiating connection to WiFi: SSID: %s", _config.wifiSSID);
+    log_i("Initiating connection to WiFi: SSID: %s", _config.getWifiSsid());
 
     /* Clear any previous WiFi settings. */
     WiFi.disconnect();
@@ -270,7 +274,7 @@ bool Talos::connectToWiFi()
     WiFi.setAutoReconnect(false); 
     
     /* Begin the WiFi! */
-    WiFi.begin(_config.wifiSSID, _config.wifiPassword);
+    WiFi.begin(_config.getWifiSsid(), _config.getWifiPassword());
 
     bool connected = false;
     time_t timeStarted = time(nullptr);
@@ -298,7 +302,7 @@ bool Talos::connectToWiFi()
             /* Continue until something interesting happens. */ 
             continue; 
         case WL_NO_SSID_AVAIL: 
-            log_e("Wifi SSID: %s was not found.", _config.wifiSSID);
+            log_e("Wifi SSID: %s was not found.", _config.getWifiSsid());
             goto Err_ConnectFailed;
         case WL_CONNECTED:
             connected = true;
@@ -373,7 +377,7 @@ bool Talos::preformFirstTimeSetup()
     printBegin("First Time Setup");
 
     /* Clear any previous configuration before first time setup.*/
-    clearConfig();
+    _config.clear();
 
     /* Generate a random password for the WiFi AP. */
     char dict[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*_";
@@ -409,23 +413,23 @@ bool Talos::preformFirstTimeSetup()
             log_i("GET [%s]: %s\n", p->name().c_str(), p->value().c_str());
 
             if (p->name() == "wifi_ssid")
-                p->value().getBytes((unsigned char*)_config.wifiSSID, sizeof(_config.wifiSSID)-1);
+                _config.setWifiSsid(p->value());
             
             if (p->name() == "wifi_password")
-                p->value().getBytes((unsigned char*)_config.wifiPassword, sizeof(_config.wifiPassword)-1);
+                _config.setWifiPassword(p->value());
 
             if (p->name() == "enable_spotify")
-                _config.spotifyEnabled = true; /* data race shouldn't occur here... hopefully.  */
+                _config.setSpotifyEnabled(true);
 
             if (p->name() == "utc_offset")
-                _config.utcOffset = p->value().toInt();
+                _config.setTimeOffset(p->value().toInt());
 
             if (p->name() == "enable_24_hour_time")
-                _config.is24HourClock = true;
+                _config.setUse24HourClock(true);
 
         }
  
-        log_i("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.wifiSSID, _config.wifiPassword);
+        log_i("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.getWifiSsid(), _config.getWifiPassword());
 
         request->send(SPIFFS, "/setup_complete.html", "text/http");
         finished = true;
@@ -443,16 +447,7 @@ bool Talos::preformFirstTimeSetup()
     _server.reset();
 
     /* Save the WiFi credentials. */
-    Preferences prefs;
-    prefs.begin("talos");
-    prefs.putBool("fts", false);
-    prefs.putBytes("wifissid", _config.wifiSSID, sizeof(_config.wifiSSID)-1);
-    prefs.putBytes("wifipass", _config.wifiPassword, sizeof(_config.wifiPassword)-1);
-    
-    /* Reset spotify authorizations. */
-    prefs.putBool("spotenable", _config.spotifyEnabled);
-    prefs.putString("spotrefresh", "");
-    prefs.end();
+    _config.save();
 
     log_i("Setup complete!");
 
@@ -511,11 +506,8 @@ bool Talos::preformSpotifyAuthorization()
     log_i("Waiting for Spotify authentication to finish...");
     while (!finished) yield();
 
-    _config.spotifyRefreshToken = _spotify.getRefreshToken();
-
-    _prefs.begin("talos");
-    _prefs.putString("spotrefresh", _config.spotifyRefreshToken);
-    _prefs.end();
+    _config.setSpotifyRefreshToken(_spotify.getRefreshToken());
+    _config.save();
 
     /* Cleanup server stuffs. */
     _server.end();
@@ -531,11 +523,8 @@ bool Talos::refreshSpotify()
     _wifiClient.setCACert(SpotifyCert::server);
     if (!_spotify.checkAndRefreshAccessToken()) return false;
 
-    _config.spotifyRefreshToken = _spotify.getRefreshToken();
-
-    _prefs.begin("talos");
-    _prefs.putString("spotrefresh", _config.spotifyRefreshToken);
-    _prefs.end();
+    _config.setSpotifyRefreshToken(_spotify.getRefreshToken());
+    _config.save();
 
     return true;
 }
