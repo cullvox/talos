@@ -62,22 +62,7 @@ unsigned char LUT_BB_7IN5_V2[]={
 };
 
 
-Display::Display()
-    : _csPin(-1)
-    , _rstPin(-1)
-    , _dcPin(-1)
-    , _busyPin(-1)
-    , _pwrPin(-1)
-    , _pSpi(nullptr)
-    , width(800)
-    , height(480)
-{
-}
 
-Extent2i Display::extent()
-{
-    return Extent2i{width, height};
-}
 
 bool Display::begin(uint16_t csPin, uint16_t rstPin, uint16_t dcPin, uint16_t busyPin, uint16_t pwrPin, SPIClass& spi)
 {
@@ -243,9 +228,9 @@ void Display::present(const uint8_t* buffer)
 {    
     sendCommand(0x13);
     Extent2i e = extent();
-    for (unsigned long j = 0; j < height; j++) {
-        for (unsigned long i = 0; i < width/8; i++) {
-            sendData(~buffer[i + j * width/8]);
+    for (unsigned long j = 0; j < extent().y; j++) {
+        for (unsigned long i = 0; i < extent().x/8; i++) {
+            sendData(~buffer[i + j * extent().x/8]);
         }
     }
 
@@ -298,7 +283,7 @@ void Display::sleep()
 void Display::clear() 
 {
     sendCommand(0x13);
-    for (unsigned long i = 0; i < height * width; i++)	{
+    for (unsigned long i = 0; i < extent().y * extent().x; i++)	{
         sendData(0x00);
     }
     sendCommand(0x12);

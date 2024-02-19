@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Arduino.h"
+#include <Arduino.h>
+
+#include "Numeric.h"
 
 #define TS_STRINGIFY(a) TS_XSTRINGIFY(a)
 #define TS_XSTRINGIFY(a) #a
@@ -70,7 +72,9 @@ class Config {
     String _wifiPassword;
     bool _isSpotifyEnabled;
     bool _isSpotifyAuthorized;
-    String _spotifyRefreshToken; 
+    String _spotifyRefreshToken;
+    s32 _timeOffset;
+    bool _use24HourClock;
 
 public:
     Config()
@@ -83,18 +87,22 @@ public:
     void clear();       /* clears all config values from preferences and in memory. */
 
     void setFirstTimeSetup(bool isFirstTimeSetup) { _isFirstTimeSetup = isFirstTimeSetup; } 
-    String setWifiSsid(const String& wifiSsid) { _wifiSsid = wifiSsid; }
-    String setWifiPassword(const String& wifiPassword) { _wifiPassword = wifiPassword; }
-    bool setSpotifyEnabled(bool isSpotifyEnabled) { _isSpotifyEnabled; }
-    bool setSpotifyAuthorized(bool isSpotifyAuthorized) { _isSpotifyAuthorized; }
-    String setSpotifyRefreshToken(const String& spotifyRefreshToken) { _spotifyRefreshToken; }
+    void setWifiSsid(const String& wifiSsid) { _wifiSsid = wifiSsid; }
+    void setWifiPassword(const String& wifiPassword) { _wifiPassword = wifiPassword; }
+    void setSpotifyEnabled(bool isSpotifyEnabled) { _isSpotifyEnabled; }
+    void setSpotifyAuthorized(bool isSpotifyAuthorized) { _isSpotifyAuthorized; }
+    void setSpotifyRefreshToken(const String& spotifyRefreshToken) { _spotifyRefreshToken; }
+    void setTimeOffset(s32 timeOffset) { _timeOffset = timeOffset; }
+    void setUse24HourClock(bool use24HourClock) { _use24HourClock = use24HourClock; }
 
     bool getFirstTimeSetup() const { return _isFirstTimeSetup; };
     bool getSpotifyEnabled() const { return _isSpotifyEnabled; }
     bool getSpotifyAuthorized() const { return _isSpotifyAuthorized; }
-    String getWifiSsid() const { return _wifiSsid; }
-    String getWifiPassword() const { return _wifiPassword; }
-    String getSpotifyRefreshToken() const { return _spotifyRefreshToken; }
+    const String& getWifiSsid() const { return _wifiSsid; }
+    const String& getWifiPassword() const { return _wifiPassword; }
+    const String& getSpotifyRefreshToken() const { return _spotifyRefreshToken; }
+    s32 getTimeOffset() const { return _timeOffset; }
+    bool getUse24HourClock() const { return _use24HourClock; }
 };
 
 } /* namespace ts */

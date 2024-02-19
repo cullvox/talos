@@ -266,8 +266,8 @@ Rect2i Render::calculateTextBox(Vector2i position, uint16_t fontSize, RenderAlig
 
     /* Converts from FreeType's FT_BBox to our Rect2i. */
     return Rect2i{
-        Vector2i{(int16_t)bbox.xMin, (int16_t)bbox.yMin}, 
-        Extent2i{(uint16_t)(bbox.xMax - bbox.xMin), (uint16_t)(bbox.yMax - bbox.yMin)}};
+        Vector2i{bbox.xMin, bbox.yMin}, 
+        Extent2i{bbox.xMax - bbox.xMin, bbox.yMax - bbox.yMin}};
 }
 
 Align Render::ofr_alignConvert(RenderAlign align)
