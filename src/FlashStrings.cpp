@@ -7,49 +7,7 @@
 #include "FlashStrings.h"
 
 
-#define TS_PROGMEM_STR(name, value) \
-    static const PROGMEM char* name = (value); \
-    static_assert(sizeof(name) <= TS_FLASH_STRINGS_MAX_LENGTH)
 
-namespace ts {
-namespace progmem {
-
-/* General */
-TS_PROGMEM_STR(Title, "TALOS");
-TS_PROGMEM_STR(TitleFull, "Time and Ambient Locale Output System");
-TS_PROGMEM_STR(Credit, "by Caden Miller");
-TS_PROGMEM_STR(Version, TALOS_VERSION_STRING);
-
-TS_PROGMEM_STR(SetupBeginning, "FIRST TIME SETUP");
-TS_PROGMEM_STR(SetupJoinWifi, "To start join TALOS_##'s WiFi on your device");
-TS_PROGMEM_STR(SetupAlmostDone, "You're almost done");
-TS_PROGMEM_STR(SetupSpotToContinue, "To continue go to talos.local/spotify to authenticate."); 
-
-TS_PROGMEM_STR(Loading0, "warming up machines...");
-TS_PROGMEM_STR(Loading1, "thinking...");
-TS_PROGMEM_STR(Loading2, "crunching numbers...");
-TS_PROGMEM_STR(Loading3, "finding nirmata..."); /* The Creator */
-TS_PROGMEM_STR(Loading4, "distributing sauces...");
-
-TS_PROGMEM_STR(SeverityError, "ERROR");
-TS_PROGMEM_STR(SeverityInfo, "INFO \uf259");
-
-/* Primary */
-TS_PROGMEM_STR(ErrWifiConFailed, "WiFi Connection Failed");
-TS_PROGMEM_STR(ErrWifiConLost, "WiFi Connection Lost");
-TS_PROGMEM_STR(ErrWifiDiscon, "WiFi Disconnected");
-TS_PROGMEM_STR(ErrWifiSsidNotFound, "WiFi SSID Not Found");
-TS_PROGMEM_STR(ErrSpotAuthFailed, "Spotify authentication failed");
-
-/* Secondary */
-TS_PROGMEM_STR(SolWifiRecon, "attempting to reconnect...");
-TS_PROGMEM_STR(SolReboot, "Rebooting...");
-TS_PROGMEM_STR(SolRestartFTS, "Restarting...");
-
-TS_PROGMEM_STR(PlaybackNowPlaying, "now playing");
-TS_PROGMEM_STR(PlaybackWasPlaying, "was playing");
-
-} /* namespace progmem */
 
 
 void Strings::copyTo(Select select, char* buf, uint32_t bufMax)

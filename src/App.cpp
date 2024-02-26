@@ -17,6 +17,7 @@
 #include "UI/Layout.h"
 #include "UI/VerticalBox.h"
 #include "UI/HorizontalBox.h"
+#include "UI/Label.h"
 #include "App.h"
 
 namespace ts {
@@ -31,7 +32,7 @@ Talos::Talos()
 
 bool Talos::init()
 {
-    printBegin("Initializing Devices");
+    printBegin("Initializing Talos");
     printStartup();
 
 
@@ -60,20 +61,22 @@ bool Talos::init()
         log_v("Mounted.");
     }
 
-    log_i("Is font file found: %d", SPIFFS.exists("/fonts/talos.ttf"));
-
-
+    /* Read in the users configuration, if there is any the defaults will be overridden. 
+        FTS will be preformed if the default FTS value is still present.*/
     log_v("Loading config...");
     _config.load();
     log_v("Loaded config.");
 
+    /* Allocate memory for the display bitmap early so that we always
+        have enough memory for it. Some instances especially with larger 
+        fonts or lots of spotify data we don't want to allocate this any later.*/
     _buffer = BitmapAlloc(_display.extent(), _bHasPsram);
 
-    /* Initialize the display and graphics operations. */
-    _render.setBitmap(_buffer);
+    log_v("Loading SPIFFS Talos font...");
+
+    /* The font renderer needs to know the device to load fonts from.*/
     ffsupport_setffs(SPIFFS);
 
-    log_v("Loading TALOS font...");
     if (!_render.loadFont("/fonts/talos.ttf"))
     {
         log_e("Could not load the icons font!");
@@ -82,15 +85,19 @@ bool Talos::init()
         log_v("Loaded font.");
     }
 
-    /* Initialize the ePaper's SPI. */
+    /* Give our large display bitmap to the renderer so it can draw to it. */
+    _render.setBitmap(_buffer);
+
+    /* Setup the electronic paper's SPI output settings. */
     SPI.begin(TS_PIN_SPI_CLK, TS_PIN_SPI_CIPO, TS_PIN_SPI_COPI, TS_PIN_PAPER_SPI_CS);
     if (!_display.begin(TS_PIN_PAPER_SPI_CS, TS_PIN_PAPER_RST, TS_PIN_PAPER_DC, TS_PIN_PAPER_BUSY, TS_PIN_PAPER_PWR)) 
     {
+        /* Something really went wrong! Check your SPI pins and ensure they are correctly placed. */
         log_i("Could not initialize the ePaper device!\n");
-        return false; /* The display is required to be initialized properly. */
+        return false; 
     }
 
-
+    /* Draw a nice little logo on every boot. This will ensure the screen is clean too. */
     File siegeFile = SPIFFS.open("/siege.bin");
 
     BitmapAlloc siegeBits{{419, 460}, true};
@@ -111,50 +118,48 @@ bool Talos::init()
 
     _display.present(_buffer.data());
 
+    /* Do a first time setup if it has not occurred yet. */
+    if (_config.isFirstTimeSetup()) {
 
-
-    /* Read in the users configuration, if any. */
-    _config.load();
-
-    if (_config.getSpotifyRefreshToken().isEmpty()) {
-        _config.setFirstTimeSetup(true); /* The configuration isn't completely finished. */
-    }
-
-    /* Preform the first time setup. */
-    if (_config.getFirstTimeSetup()) {
-        if (!preformFirstTimeSetup()) return false;
+        if (!preformFirstTimeSetup()) 
+            return false; /* FTS can sometimes fail... spectacularly! */
+        
         _prefs.begin("talos");
         _prefs.putBool("fts", false);
         _prefs.end();
     }
 
-    /* Attempt to connect to the users Wi-Fi, on fail wait a little and try again. */
-    if (!connectToWiFi()) {
-        return true; /* This is a successful error condition. */
-    }
+    /* Sometimes Wi-Fi can be a little spotty so we always check for Wi-Fi when running too. 
+        That leads this to not being an error when we would usually think of it as one.
+        However Talos will only reset the users Wi-Fi secrets when they request it (from the button). */
+    connectToWiFi();
 
-
-    printEnd("Initializing Devices");
-
+    /* And we're done! */
+    printEnd("Initializing");
     return true;
 }
 
 void Talos::run()
 {
 
-    _display.reset();
-
-    /* If the user pressed the reset button we will completely reset the device. */
+    /* Check if the user pressed the reset button while the device was asleep. */
     if (_bReset) {
+        /* This will bring the device back to a factory reset state 
+            and initialize into FTS. */
         _config.clear();
         ESP.restart();
     }
 
-    /* We must wait for the user to be connected before we display anything. */
+    /* The display is powered down before after every run, so we reset
+        it before every run. Otherwise the display would could get some
+        nasty burn in. */
+    _display.reset();
+
+    /* Ensure we are connected to the internet for this run. */
     if (!WiFi.isConnected()) {
         if (!connectToWiFi()) {
             log_e("Could not connect to WiFi, skipping page for now.");
-            return;
+            return; /* wait until next run?... */
         }
     }
 
@@ -228,31 +233,31 @@ void Talos::printStartup()
     log_printf("");
 }
 
+
+/* This captive request handler hooks into the AsyncWebServer and 
+    pulls all requests quickly and easily that creates a Captive Portal! */
 class CaptiveRequestHandler : public AsyncWebHandler
 {
 public:
     bool canHandle(AsyncWebServerRequest *request) {
-        request->addInterestingHeader("ANY");
+        request->addInterestingHeader("ANY"); /* This makes it CAPTIVE! */
         return true;
     }
+
+    /* Handles and sends all requests required for the setup site. 
+        This could probably be cleaned up to be more generalized but for now
+        hardcoding all the files ensures that there are no slip ups. */
     void handleRequest(AsyncWebServerRequest *request) {
-        if (request->method() == HTTP_GET &&
-            request->url() == "/css/pico.min.css") {
-            log_i("Sending /css/pico.min.css");
+        if (request->method() == HTTP_GET && request->url() == "/css/pico.min.css") {
             request->send(SPIFFS, "/css/pico.min.css", "text/css");
             return;
-        } else if (request->method() == HTTP_GET &&
-            request->url() == "/css/font-awesome.min.css") {
-                log_i("Sending /css/font-awesome.min.css");
+        } else if (request->method() == HTTP_GET && request->url() == "/css/font-awesome.min.css") {
             request->send(SPIFFS, "/css/font-awesome.min.css", "text/css");
             return;
-        } else if (request->method() == HTTP_GET &&
-            request->url() == "/fonts/fontawesome-webfont.ttf?v=4.7.0") {
+        } else if (request->method() == HTTP_GET && request->url() == "/fonts/fontawesome-webfont.ttf?v=4.7.0") {
             request->send(SPIFFS, "/fonts/fontawesome-webfont.ttf", "text/font");
             return;
-        } else if (request->method() == HTTP_GET &&
-            request->url() == "/") {
-            log_i("Sending /first_time_setup.html");
+        } else if (request->method() == HTTP_GET && request->url() == "/") {
             request->send(SPIFFS, "/first_time_setup.html");
             return;
         }
@@ -314,7 +319,7 @@ bool Talos::connectToWiFi()
             log_e("WiFi connection lost.");
             goto Err_ConnectFailed;
 
-        case WL_SCAN_COMPLETED: /* We aren't scanning right now... */
+        case WL_SCAN_COMPLETED: /* We aren't scanning right now... why? */
         case WL_NO_SHIELD:
         default:
             log_i("Unexpected WiFi connection error: %d", WiFi.status());
@@ -332,10 +337,12 @@ bool Talos::connectToWiFi()
     {
         /* WiFi might not be properly configured, we're not connected to the web. */
         log_e("NTP connection failed, WiFi may not be connected to internet.");
+        /* TODO: Display an error message on screen for connection failure. */
         return false;
-        // displayGeneral()
     }
 
+    /* Time sync to the current UTC time on the internet.
+        This also acts a test of the connection. */
     timeStarted = time(nullptr);
     while (NTP.getFirstSync() == 0) {
         /* Stop attempting to connect after time runs out. */
@@ -354,13 +361,11 @@ bool Talos::connectToWiFi()
         log_i("Waiting for an NTP connection.");
     }
 
-    log_i("Current network time: %s", NTP.getTimeDateString());
-
+    log_i("Current internet time: %s", NTP.getTimeDateString());
     return true;
 
 Err_ConnectFailed:
-    // slideError.setSecondary(ts::Strings::eSol_Reboot);
-    // error();
+    // TODO: Display an internet connection error.
     return false;
 }
 
@@ -376,7 +381,7 @@ bool Talos::preformFirstTimeSetup()
 {
     printBegin("First Time Setup");
 
-    /* Clear any previous configuration before first time setup.*/
+    /* Clear any previous configuration before starting the first time setup.*/
     _config.clear();
 
     /* Generate a random password for the WiFi AP. */
@@ -401,9 +406,10 @@ bool Talos::preformFirstTimeSetup()
     /* TODO: Display the actual SSID in displayGeneral some how. */
     displayGeneral(Strings::eSeverityInfo, Strings::eSetupBeginning, Strings::eSetupJoinWifi);
     
-    /* Setup the server callbacks and begin. */
     std::atomic<bool> finished(false);
 
+    /* Lambda called when the web site sends the GET request to 
+        submit all the values from setup. */
     _server.on("/done", HTTP_GET, [&](AsyncWebServerRequest* request){
         
         /* Retrieve the WiFi SSID, password, username and identity. */
@@ -412,21 +418,11 @@ bool Talos::preformFirstTimeSetup()
             AsyncWebParameter* p = request->getParam(i);
             log_i("GET [%s]: %s\n", p->name().c_str(), p->value().c_str());
 
-            if (p->name() == "wifi_ssid")
-                _config.setWifiSsid(p->value());
-            
-            if (p->name() == "wifi_password")
-                _config.setWifiPassword(p->value());
-
-            if (p->name() == "enable_spotify")
-                _config.setSpotifyEnabled(true);
-
-            if (p->name() == "utc_offset")
-                _config.setTimeOffset(p->value().toInt());
-
-            if (p->name() == "enable_24_hour_time")
-                _config.setUse24HourClock(true);
-
+            if (p->name() == "wifi_ssid")           _config.setWifiSsid(p->value());
+            if (p->name() == "wifi_password")       _config.setWifiPassword(p->value());
+            if (p->name() == "enable_spotify")      _config.setSpotifyEnabled(true);
+            if (p->name() == "utc_offset")          _config.setTimeOffset(p->value().toInt());
+            if (p->name() == "enable_24_hour_time") _config.setUse24HourClock(true);
         }
  
         log_i("Recieved Wi-Fi SSID: %s, Password: %s\n", _config.getWifiSsid(), _config.getWifiPassword());
@@ -435,10 +431,13 @@ bool Talos::preformFirstTimeSetup()
         finished = true;
     });
  
- 
+    
+    /* Create a captive request handler and finally begin the web server for FTS. */
     _server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
     _server.begin();
  
+    /* Wait until the user completes FTS. The web server uses other threads, 
+        while the DNS server does its thing in this thread so we manually update it.  */
     while (!finished) { dnsServer.processNextRequest(); yield(); }
 
     // WiFi.softAPdisconnect(true);
@@ -446,7 +445,7 @@ bool Talos::preformFirstTimeSetup()
     dnsServer.stop();
     _server.reset();
 
-    /* Save the WiFi credentials. */
+    /* Finally save the Wi-Fi credentials into the config. */
     _config.save();
 
     log_i("Setup complete!");
@@ -458,7 +457,7 @@ bool Talos::preformFirstTimeSetup()
 
 bool Talos::preformSpotifyAuthorization()
 {
-    printBegin("Spotify Authentication Process");
+    printBegin("Spotify Authentication");
 
     /* Add spotify callbacks for the authentication process. */
     std::atomic<bool> finished(false);
@@ -467,6 +466,14 @@ bool Talos::preformSpotifyAuthorization()
     log_v("Beginning MDNS");
     MDNS.begin("talos");
 
+
+
+    /* We are doing Spotify's PKCE Authentication method. This means we don't require
+        a client secret in order to access Spotify's APIs. It's much safer than storing
+        the client secret on this device that any user or developer could easily see by
+        reverse engineering. */
+    const char* TALOS_SPOTIFY_CALLBACK_URL = "http%3A%2F%2Ftalos.local%2Fspotify_callback";
+
     _server.on("/spotify", [&](AsyncWebServerRequest* request){
         char url[500];
         const char* scopes = "user-read-private+"
@@ -474,55 +481,56 @@ bool Talos::preformSpotifyAuthorization()
                              "user-read-playback-state";
 
         _wifiClient.setCACert(SpotifyCert::server);
-        _spotify.generateRedirectForPKCE(scopes, "http%3A%2F%2Ftalos.local%2Fspotify_callback", url, sizeof(url));
+        _spotify.generateRedirectForPKCE(scopes, TALOS_SPOTIFY_CALLBACK_URL, url, sizeof(url));
 
         log_v("Redirecting to Spotify authentication URL: %s", url);
         request->redirect(url);
     });
 
-    const char *refreshToken = NULL;
     _server.on("/spotify_callback", [&](AsyncWebServerRequest* request){                
         AsyncWebParameter* param = request->getParam("code");
-        if (!param)
-        {
+        if (!param) {
             log_e("User denied Spotify authetication request!");
             request->send(200, "text/plain", "Please reauthenticate, user denied authentication!");
             return;
         }
 
         String code = param->value();
+        log_v("Received Spotify code: %s", code.c_str());
 
-        log_v("Recieved Spotify code: %s", code.c_str());
+        if (!_spotify.requestAccessTokens(code.c_str(), TALOS_SPOTIFY_CALLBACK_URL))
+            return; /* The access token request failed! */
 
-        if (!_spotify.requestAccessTokens(code.c_str(), "http%3A%2F%2Ftalos.local%2Fspotify_callback"))
-            return;
-
+        /* Authentication has been completed! */
         finished = true;
     });
 
+    /* Begin the web server to receive the Spotify tokens. */
     _server.begin();
 
     /* Wait until the user authenticates the device from the web. */
     log_i("Waiting for Spotify authentication to finish...");
     while (!finished) yield();
 
+    /* Save the refresh token to the config and cleanup. */
     _config.setSpotifyRefreshToken(_spotify.getRefreshToken());
     _config.save();
 
-    /* Cleanup server stuffs. */
     _server.end();
     MDNS.end();
 
-    printEnd("Spotify Authentication Process");
-
+    printEnd("Spotify Authentication");
     return true;
 }
 
 bool Talos::refreshSpotify()
 {
+    /* Set the WiFi Client to the Spotify Cert and then see if 
+        we should request another access token. */
     _wifiClient.setCACert(SpotifyCert::server);
     if (!_spotify.checkAndRefreshAccessToken()) return false;
 
+    /* Save the refresh token to the config. */
     _config.setSpotifyRefreshToken(_spotify.getRefreshToken());
     _config.save();
 
@@ -541,6 +549,8 @@ void Talos::displayGeneral(Strings::Select severity, Strings::Select primary, St
 
 void Talos::interruptClear(void* arg)
 {
+    /* This function is called whenever the button is pushed, sometimes it takes a 
+        little while to actually call. (usually occurs after the device wakes back up)*/
     Talos* talos = (Talos*)arg;
     talos->_bReset = true;
 }

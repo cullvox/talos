@@ -95,7 +95,7 @@ public:
     void setTimeOffset(s32 timeOffset) { _timeOffset = timeOffset; }
     void setUse24HourClock(bool use24HourClock) { _use24HourClock = use24HourClock; }
 
-    bool getFirstTimeSetup() const { return _isFirstTimeSetup; };
+    bool isFirstTimeSetup() const { return _isFirstTimeSetup; };
     bool getSpotifyEnabled() const { return _isSpotifyEnabled; }
     bool getSpotifyAuthorized() const { return _isSpotifyAuthorized; }
     const String& getWifiSsid() const { return _wifiSsid; }

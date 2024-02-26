@@ -36,21 +36,15 @@ public:
     void shutdown();
 
 private:
-    static void printBegin(const char* name);
-    static void printEnd(const char* name);
-    static void printStartup();
-    void readConfig();
-    void writeConfig();
-    static void clearConfig();
-    bool connectToWiFi();
-    bool preformFirstTimeSetup();
-    bool preformSpotifyAuthorization();
-    bool refreshSpotify();
+    static void printStartup(); /* prints the talos text (for pre initialization). */
+    static void printBegin(const char* name); /* prints the context begin text. */
+    static void printEnd(const char* name); /* prints the context end text. */
+    static void interruptClear(void* arg); /* callback called clear config button is pressed. */
 
-    /** @brief Clears the configuration and restarts the device. */
-    static void interruptClear(void* arg);
-
-    void displayGeneral(Strings::Select severity, Strings::Select primary, Strings::Select secondary);
+    bool connectToWiFi(); /* connects the esp32 to wifi.*/
+    bool preformFirstTimeSetup(); /* clears the config and does all fts. */
+    bool preformSpotifyAuthorization(); /* authorizes the user with spotify if they wanted. */
+    bool refreshSpotify(); /* recreates the spotify refresh token. */
 
     bool _bHasPsram;
     bool _bReset;

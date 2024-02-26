@@ -4,7 +4,6 @@
 
 namespace ts {
 class Layout : public Node {
-
     Extent2i _extent;
     Node* _child;
 
