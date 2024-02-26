@@ -101,7 +101,7 @@ Render& Render::setPixel(Vector2i pos, Color color)
 {
     assert(_bitmap && "Bitmap must be set before drawing!");
 
-    _bitmap->set(pos, toBool(color));
+    _bitmap->set(pos, color);
     return *this;
 }
 

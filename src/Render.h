@@ -2,6 +2,7 @@
 
 #include <OpenFontRender.h>
 
+#include "Numeric.h"
 #include "Bitmap.h"
 #include "FlashStrings.h"
 
@@ -29,22 +30,26 @@ enum class RenderAlign {
 /** @brief Colors capable of drawing with. */
 
 struct Color {
-    enum Enum : uint16_t {
+    enum Enum : u16 {
         eWhite = 0xFFFF,
         eBlack = 0x0000,
     };
 
-    operator bool() const { 
-        switch (color) {
+    Enum value;
+
+    constexpr Color() 
+        : value(eWhite) {}
+        
+    constexpr Color(Enum color) 
+        : value(color) {}
+
+    constexpr operator bool() const { 
+        switch (value) {
             case Color::eBlack: return true;
             case Color::eWhite: return false;
             default: return false;
         }
     }
-
-    Color operator=()
-
-    Enum value;
 };
 
 /** @brief General purpose renderer for bit-per-pixel bitmap images. */
