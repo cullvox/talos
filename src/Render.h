@@ -50,6 +50,11 @@ struct Color {
             default: return false;
         }
     }
+
+
+    Color operator=()
+
+    Enum value;
 };
 
 /** @brief General purpose renderer for bit-per-pixel bitmap images. */

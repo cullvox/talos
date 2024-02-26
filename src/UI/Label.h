@@ -11,7 +11,6 @@ class Label : public Node {
 private:
     std::string _text;
     u16 _fontSize;
-
 public:
     constexpr Label() = default;
     constexpr ~Label() = default;
@@ -32,7 +31,6 @@ public:
             .drawText(_text.c_str());
 
     }
-
 
 };
 
