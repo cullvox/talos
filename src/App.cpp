@@ -79,7 +79,7 @@ bool Talos::init()
 
     if (!_render.loadFont("/fonts/talos.ttf"))
     {
-        log_e("Could not load the icons font!");
+        log_e("Could not load the talos font!");
         return false; /* The font must be loaded in order to operate TALOS. */
     } else {
         log_v("Loaded font.");
@@ -120,9 +120,8 @@ bool Talos::init()
 
     /* Do a first time setup if it has not occurred yet. */
     if (_config.isFirstTimeSetup()) {
-
-        if (!preformFirstTimeSetup()) 
-            return false; /* FTS can sometimes fail... spectacularly! */
+        
+        if (!preformFirstTimeSetup()) return false;
         
         _prefs.begin("talos");
         _prefs.putBool("fts", false);
@@ -449,7 +448,6 @@ bool Talos::preformFirstTimeSetup()
     _config.save();
 
     log_i("Setup complete!");
-
     printEnd("First Time Setup");
 
     return true;
@@ -466,14 +464,11 @@ bool Talos::preformSpotifyAuthorization()
     log_v("Beginning MDNS");
     MDNS.begin("talos");
 
-
-
     /* We are doing Spotify's PKCE Authentication method. This means we don't require
         a client secret in order to access Spotify's APIs. It's much safer than storing
         the client secret on this device that any user or developer could easily see by
         reverse engineering. */
     const char* TALOS_SPOTIFY_CALLBACK_URL = "http%3A%2F%2Ftalos.local%2Fspotify_callback";
-
     _server.on("/spotify", [&](AsyncWebServerRequest* request){
         char url[500];
         const char* scopes = "user-read-private+"

@@ -76,7 +76,7 @@ void BitmapInterface::clear(uint8_t value)
 
 void BitmapInterface::flip()
 {
-    for (uint32_t i = 0; i < sizeBytes(); i++)
+    for (uint32_t i = 0; i < sizeBytes(); i++) 
     {
         data()[i] = ~data()[i];
     }

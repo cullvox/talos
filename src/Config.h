@@ -18,10 +18,10 @@
 #define TALOS_VERSION_PATCH 0
 
 #define TALOS_VERSION_STRING TALOS_VERSION_TAG "-v" TS_STRINGIFY(TALOS_VERSION_MAJOR) "." TS_STRINGIFY(TALOS_VERSION_MINOR) "." TS_STRINGIFY(TALOS_VERSION_PATCH)
-#define TALOS_VERSION_CODE (uint32_t)(TALOS_VERSION_TAG[0]) << 24 | \
-                            (uint32_t)(TALOS_VERSION_MAJOR) << 16 | \
-                            (uint32_t)(TALOS_VERSION_MINOR) << 8 | \
-                            (uint32_t)(TALOS_VERSION_PATCH);
+#define TALOS_VERSION_CODE (u32)(TALOS_VERSION_TAG[0]) << 24 | \
+                            (u32)(TALOS_VERSION_MAJOR) << 16 | \
+                            (u32)(TALOS_VERSION_MINOR) << 8 | \
+                            (u32)(TALOS_VERSION_PATCH);
 
 /* Any git info is gathered at pre-build time. */
 #ifndef TALOS_VERSION_GIT_TAG
@@ -79,7 +79,6 @@ class Config {
 public:
     Config()
         : _isFirstTimeSetup(true) {}
-    
     ~Config() = default;
 
     void load();        /* loads values from preferences into memory.*/

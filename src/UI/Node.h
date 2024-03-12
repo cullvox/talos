@@ -1,7 +1,5 @@
 #pragma once
 
-#include <array>
-
 #include "Vector.h"
 #include "Rect.h"
 #include "Render.h"

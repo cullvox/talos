@@ -6,16 +6,12 @@
 #include "Config.h"
 #include "FlashStrings.h"
 
-
-
-
+namespace ts {
 
 void Strings::copyTo(Select select, char* buf, uint32_t bufMax)
 {
-    const char* str = [select]()
-    {
-        switch (select)
-        {
+    const char* str = [select](){
+        switch (select) {
         case eTitle: return progmem::Title;
         case eTitleFull: return progmem::TitleFull;
         case eCredit: return progmem::Credit;

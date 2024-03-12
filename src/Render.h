@@ -35,11 +35,8 @@ struct Color {
         eBlack = 0x0000,
     };
 
-    Enum value;
-
     constexpr Color() 
         : value(eWhite) {}
-        
     constexpr Color(Enum color) 
         : value(color) {}
 
@@ -51,8 +48,10 @@ struct Color {
         }
     }
 
-
-    Color operator=()
+    constexpr Color& operator=(Enum color) {
+        value = color;
+        return *this;
+    }
 
     Enum value;
 };

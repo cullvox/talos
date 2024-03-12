@@ -20,6 +20,7 @@ public:
     }
            
     virtual void render(Render& render) {
+        Node::render(render);
         _child->render(render);
     }
 
