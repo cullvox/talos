@@ -1,0 +1,10 @@
+#ifndef TALOS_RESULT_H
+#define TALOS_RESULT_H
+
+typedef int talos_res;
+
+#define TALOS_RESULT_SUCCESS 1
+#define TALOS_RESULT_FAILURE 0
+#define TALOS_RESULT_MEMORY_ALLOCATION_FAILURE -1
+
+#endif

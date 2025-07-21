@@ -1,4 +1,4 @@
-#include <pgmspace.h>
+#include <avr/pgmspace.h>
 #include <string.h>
 
 #include <Arduino.h>

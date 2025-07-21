@@ -1,9 +1,7 @@
 #include <memory.h>
 #include <utility>
 
-#include <Arduino.h>
 
-#include "Print.h"
 #include "Bitmap.h"
 
 namespace ts {
